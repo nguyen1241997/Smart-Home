@@ -33,7 +33,7 @@ int main(void)
 		CheckSum=receive_dht11();
 		if ((I_RH + D_RH + I_Temp + D_Temp) == CheckSum)
 			count_1++;
-		delay_ms(200000);
+		delay_ms(100000);
 		count_0++;
 	}
 }
@@ -175,8 +175,8 @@ uint8_t receive_dht11(void)
 {
 	for (int q=0; q<8; q++)
 	{
-		while(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_6)==0);  /* check received bit 0 or 1 */
-		delay_ms(3);
+		while(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_6)==0);
+		delay_ms(5);
 		if(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_6))/* if high pulse is greater than 30us */
 		{
 			c = (c<<1)|(0x01);

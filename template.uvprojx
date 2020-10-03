@@ -452,6 +452,21 @@
               <FileType>1</FileType>
               <FilePath>..\..\stm32\STM32F4xx_DSP_StdPeriph_Lib_V1.8.0\Libraries\STM32F4xx_StdPeriph_Driver\src\stm32f4xx_syscfg.c</FilePath>
             </File>
+            <File>
+              <FileName>stm32f4xx_spi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\stm32\STM32F4xx_DSP_StdPeriph_Lib_V1.8.0\Libraries\STM32F4xx_StdPeriph_Driver\src\stm32f4xx_spi.c</FilePath>
+            </File>
+            <File>
+              <FileName>mainn.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Soure Code RC522+SMT32F103\mainn.c</FilePath>
+            </File>
+            <File>
+              <FileName>RFID.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Soure Code RC522+SMT32F103\RFID.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
