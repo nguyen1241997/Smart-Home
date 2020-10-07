@@ -8,6 +8,10 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance/object.
 
 int variable = 0;
 
+unsigned long uidDec, uidDecTemp; // hien thi so UID dang thap phan
+byte bCounter, readBit;
+unsigned long ticketNumber;
+
 void setup() 
 {
   Serial.begin(9600);
@@ -28,6 +32,7 @@ void loop()
   {
     return;
   }
+
   
   
   //Show UID on serial monitor
@@ -57,4 +62,19 @@ void loop()
     Serial.println(" Access Denied ");
     delay(3000);
   }
+  
+  /*
+  uidDec = 0;
+
+  // Hien thi so UID cua the
+  Serial.println("Card UID: ");
+  for (byte i = 0; i < mfrc522.uid.size; i++)
+  {
+    uidDecTemp = mfrc522.uid.uidByte[i];
+    uidDec = uidDec*256+uidDecTemp;
+  } 
+  Serial.println(uidDec);
+
+  delay(1000);
+  */
 } 
