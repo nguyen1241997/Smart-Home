@@ -1,0 +1,18 @@
+StaticJsonBuffer<256> jb;
+JsonObject& obj = jb.createObject();
+obj["university"]=String("Ho Chi Minh City University of Technology");
+
+Firebase.setString("name","nguyen vu nguyen");
+
+Serial.println(Firebase.getInt("JSON/tim"));
+
+FirebaseObject fb = Firebase.get("getData");
+Serial.println(fb.getString("menu"));
+
+Firebase.stream("getData");
+if(Firebase.available())
+  {
+    FirebaseObject fb = Firebase.readEvent();
+    Serial.println(fb.getString("path"));
+    Serial.println(fb.getInt("data"));
+  }
