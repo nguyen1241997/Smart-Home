@@ -3,9 +3,16 @@
 #include "stm32f4xx_tim.h"
 #include "stm32f4xx_exti.h"
 
+/*
+-PA6: DHT11
+-PA7: gas sensor
+-PA8: water sensor
+-PC6: servo
+*/
+
 void exti0_init(void);
 
-void timer_init(void);
+void timer6_delay_init(void);
 void delay_10_us(uint32_t time);
 
 void request_dht11(void);
@@ -13,28 +20,41 @@ void response_dht11(void);
 uint8_t receive_dht11(void);
 void readDHT11(void);
 	
-void adc_init(void);
-uint16_t ADC_Read(void);
+void gas_sensor_init(void);
+uint16_t read_gas_sensor(void);
 
-volatile long int count_1=0, count_0=0;
+void water_sensor_init(void);
+uint16_t read_water_sensor(void);
+
+void timer3_pwm_sg90(void);
 
 GPIO_InitTypeDef DHT11_TypeDef; //DHT11
 
 uint8_t c, I_RH, D_RH, I_Temp, D_Temp, CheckSum;
 
-uint16_t adcValue;
-char check;
+uint16_t gas_sensor_value;
+uint16_t water_sensor_value;
 
 int main(void)
 {	
-	timer_init();
-	adc_init();
-	
+	timer6_delay_init();
+	gas_sensor_init();
+  water_sensor_init();
+	timer3_pwm_sg90();
+	//TIM_SetCompare1(TIM3,80); //20~140
 	while(1)
 	{
-		readDHT11();
-		adcValue = ADC_Read();
-		check = GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_8);
+		//readDHT11();
+		gas_sensor_value = read_gas_sensor();
+		if (gas_sensor_value>2500)
+		{
+			TIM_SetCompare1(TIM3,140);
+		}
+		else
+		{
+			TIM_SetCompare1(TIM3,80);
+		}
+		water_sensor_value = read_water_sensor();
 		delay_10_us(200000);
 	}
 }
@@ -48,7 +68,7 @@ void delay_10_us(uint32_t time)
 	}
 }
 
-void timer_init(void)
+void timer6_delay_init(void)
 {
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM6,ENABLE);
 	
@@ -147,6 +167,8 @@ void request_dht11(void)
 {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA,ENABLE);
 	
+	GPIO_InitTypeDef DHT11_TypeDef;
+	
 	DHT11_TypeDef.GPIO_Mode = GPIO_Mode_OUT;
 	DHT11_TypeDef.GPIO_OType = GPIO_OType_PP;
 	DHT11_TypeDef.GPIO_PuPd = GPIO_PuPd_NOPULL;
@@ -164,6 +186,8 @@ void request_dht11(void)
 void response_dht11(void)
 {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA,ENABLE);
+	
+	GPIO_InitTypeDef DHT11_TypeDef;
 	
 	DHT11_TypeDef.GPIO_Mode = GPIO_Mode_IN;
 	DHT11_TypeDef.GPIO_OType = GPIO_OType_PP;
@@ -209,17 +233,17 @@ void readDHT11(void)
 			
 		}
 }
-void adc_init(void)
+void gas_sensor_init(void)
 {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA,ENABLE);
 	
-	GPIO_InitTypeDef myLED;
-	myLED.GPIO_Mode = GPIO_Mode_AN;
-	myLED.GPIO_OType = GPIO_OType_PP;
-	myLED.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	myLED.GPIO_Speed = GPIO_Low_Speed;
-	myLED.GPIO_Pin = GPIO_Pin_7;
-	GPIO_Init(GPIOA,&myLED);
+	GPIO_InitTypeDef myGPIO;
+	myGPIO.GPIO_Mode = GPIO_Mode_AN;
+	myGPIO.GPIO_OType = GPIO_OType_PP;
+	myGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	myGPIO.GPIO_Speed = GPIO_Low_Speed;
+	myGPIO.GPIO_Pin = GPIO_Pin_7;
+	GPIO_Init(GPIOA,&myGPIO);
 	
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
 	
@@ -235,7 +259,7 @@ void adc_init(void)
 	ADC_Cmd(ADC1,ENABLE);
 
 }
-uint16_t ADC_Read(void)
+uint16_t read_gas_sensor(void)
 {
     ADC_SoftwareStartConv(ADC1);
 
@@ -243,14 +267,71 @@ uint16_t ADC_Read(void)
 
     return ADC_GetConversionValue(ADC1);
 }
-void water_sensor_digital_init(void)
+
+void water_sensor_init(void)
 {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA,ENABLE);
 	
-	DHT11_TypeDef.GPIO_Mode = GPIO_Mode_IN;
-	DHT11_TypeDef.GPIO_OType = GPIO_OType_PP;
-	DHT11_TypeDef.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	DHT11_TypeDef.GPIO_Speed = GPIO_High_Speed;
-	DHT11_TypeDef.GPIO_Pin = GPIO_Pin_8;
-	GPIO_Init(GPIOA,&DHT11_TypeDef);
+	GPIO_InitTypeDef myGPIO;
+	myGPIO.GPIO_Mode = GPIO_Mode_AN;
+	myGPIO.GPIO_OType = GPIO_OType_PP;
+	myGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	myGPIO.GPIO_Speed = GPIO_Low_Speed;
+	myGPIO.GPIO_Pin = GPIO_Pin_8;
+	GPIO_Init(GPIOA,&myGPIO);
+	
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+	
+	ADC_InitTypeDef myADC;
+	myADC.ADC_ContinuousConvMode = DISABLE;
+	myADC.ADC_DataAlign = ADC_DataAlign_Right;
+	myADC.ADC_Resolution = ADC_Resolution_12b;
+	myADC.ADC_NbrOfConversion = 1;
+	ADC_Init(ADC1,&myADC);	
+	
+	ADC_RegularChannelConfig (ADC1,ADC_Channel_8,2,ADC_SampleTime_144Cycles);
+	ADC_ITConfig(ADC1,ADC_IT_EOC,ENABLE);
+	ADC_Cmd(ADC1,ENABLE);
+
+}
+uint16_t read_water_sensor(void)
+{
+    ADC_SoftwareStartConv(ADC1);
+
+    while (!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
+
+    return ADC_GetConversionValue(ADC1);
+}
+void timer3_pwm_sg90(void)
+{
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3,ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC,ENABLE);
+
+	
+	GPIO_InitTypeDef myGPIO;
+	myGPIO.GPIO_Mode = GPIO_Mode_AF;
+	myGPIO.GPIO_OType = GPIO_OType_PP;
+	myGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	myGPIO.GPIO_Speed = GPIO_Low_Speed;
+	myGPIO.GPIO_Pin = GPIO_Pin_6;
+	GPIO_Init(GPIOC,&myGPIO);
+	
+	TIM_TimeBaseInitTypeDef myTimer;
+	myTimer.TIM_Prescaler = 1680-1;
+	myTimer.TIM_Period = 1000-1;
+	myTimer.TIM_ClockDivision = TIM_CKD_DIV1;
+	myTimer.TIM_CounterMode = TIM_CounterMode_Up;
+	TIM_TimeBaseInit(TIM3,&myTimer);
+	TIM_Cmd(TIM3,ENABLE);
+	
+	TIM_OCInitTypeDef myPWM;
+	myPWM.TIM_OCMode = TIM_OCMode_PWM1;
+	myPWM.TIM_OCPolarity = TIM_OCPolarity_High;
+	myPWM.TIM_Pulse = 0;
+	myPWM.TIM_OutputState = TIM_OutputState_Enable;
+	TIM_OC1Init(TIM3,&myPWM);
+	
+	TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
+	
+	GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_TIM3);
 }

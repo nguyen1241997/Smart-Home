@@ -153,32 +153,27 @@
         <Ww>
           <count>0</count>
           <WinNumber>1</WinNumber>
-          <ItemText>count_0,0x0A</ItemText>
+          <ItemText>I_Temp,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>count_1,0x0A</ItemText>
+          <ItemText>D_Temp,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>2</count>
           <WinNumber>1</WinNumber>
-          <ItemText>I_Temp,0x0A</ItemText>
+          <ItemText>I_RH,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>3</count>
           <WinNumber>1</WinNumber>
-          <ItemText>D_Temp,0x0A</ItemText>
+          <ItemText>D_RH,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>4</count>
           <WinNumber>1</WinNumber>
-          <ItemText>I_RH,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>5</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>D_RH,0x0A</ItemText>
+          <ItemText>gas_sensor_value,0x0A</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
