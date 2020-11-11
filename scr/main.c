@@ -7,13 +7,16 @@
 -PA6: DHT11
 -PA7: gas sensor
 -PA8: water sensor
--PC6: servo
+-PC6: servo: 20~140
+-PA2-PA3: TX-RX
 */
 
 void exti0_init(void);
 
 void timer6_delay_init(void);
 void delay_10_us(uint32_t time);
+
+void led_init(void);
 
 void request_dht11(void);
 void response_dht11(void);
@@ -28,23 +31,41 @@ uint16_t read_water_sensor(void);
 
 void timer3_pwm_sg90(void);
 
-GPIO_InitTypeDef DHT11_TypeDef; //DHT11
+void timer7_interrput(void);
+
+void gpio_init(void);
+
+void uart2_init(void);
+void usart_send_char(char data);
+void usart_send_string(char *s);
 
 uint8_t c, I_RH, D_RH, I_Temp, D_Temp, CheckSum;
 
 uint16_t gas_sensor_value;
 uint16_t water_sensor_value;
 
+char buffer[20];
+uint16_t test=123;
+float test1=123.45;
+
 int main(void)
 {	
+	
 	timer6_delay_init();
+	/*
 	gas_sensor_init();
   water_sensor_init();
 	timer3_pwm_sg90();
-	//TIM_SetCompare1(TIM3,80); //20~140
+	
+	led_init();
+	//timer7_interrput();
+	
+	gpio_init();
+	*/
+	uart2_init();
 	while(1)
 	{
-		//readDHT11();
+		/*
 		gas_sensor_value = read_gas_sensor();
 		if (gas_sensor_value>2500)
 		{
@@ -55,6 +76,13 @@ int main(void)
 			TIM_SetCompare1(TIM3,80);
 		}
 		water_sensor_value = read_water_sensor();
+		
+		*/
+		test++;
+		sprintf(buffer,"a%dz",test);
+		//sprintf(buffer,"%.2lf",test1);
+		usart_send_string(buffer);
+		//usart_send_char('9');
 		delay_10_us(200000);
 	}
 }
@@ -78,89 +106,17 @@ void timer6_delay_init(void)
 	TIM_TimeBaseInit(TIM6,&myTimer6);
 	TIM_Cmd(TIM6,ENABLE);
 }
-
-void exti0_init(void)
+void led_init(void)
 {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD,ENABLE);
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA,ENABLE);
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG,ENABLE);
 	
 	GPIO_InitTypeDef myLED;
-	GPIO_InitTypeDef myBtn;
-	GPIO_InitTypeDef myBtn1;
-	EXTI_InitTypeDef myExti;
-	NVIC_InitTypeDef myNvic;
-	NVIC_InitTypeDef myNvic1;
-	
 	myLED.GPIO_Mode = GPIO_Mode_OUT;
 	myLED.GPIO_OType = GPIO_OType_PP;
 	myLED.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	myLED.GPIO_Speed = GPIO_Low_Speed;
 	myLED.GPIO_Pin = GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
 	GPIO_Init(GPIOD,&myLED);
-	
-	myBtn.GPIO_Mode = GPIO_Mode_IN;
-	myBtn.GPIO_OType = GPIO_OType_PP;
-	myBtn.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	myBtn.GPIO_Pin = GPIO_Pin_0;
-	GPIO_Init(GPIOA,&myBtn);
-	
-	myBtn1.GPIO_Mode = GPIO_Mode_IN;
-	myBtn1.GPIO_OType = GPIO_OType_PP;
-	myBtn1.GPIO_PuPd = GPIO_PuPd_DOWN;
-	myBtn1.GPIO_Pin = GPIO_Pin_1;
-	GPIO_Init(GPIOA,&myBtn1);
-	
-	myExti.EXTI_Line = EXTI_Line0 | EXTI_Line1;
-	myExti.EXTI_Mode = EXTI_Mode_Interrupt;
-	myExti.EXTI_Trigger = EXTI_Trigger_Falling;
-	myExti.EXTI_LineCmd = ENABLE;
-	EXTI_Init(&myExti);
-	
-	//attach gpio pin to exti
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource0);
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource1);
-	
-	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
-	
-	myNvic.NVIC_IRQChannel = EXTI0_IRQn;
-	myNvic.NVIC_IRQChannelPreemptionPriority = 0;
-	myNvic.NVIC_IRQChannelSubPriority = 0;
-	myNvic.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&myNvic);
-	
-	myNvic1.NVIC_IRQChannel = EXTI1_IRQn;
-	myNvic1.NVIC_IRQChannelPreemptionPriority = 1;
-	myNvic1.NVIC_IRQChannelSubPriority = 0;
-	myNvic1.NVIC_IRQChannelCmd = ENABLE;
-	
-	NVIC_Init(&myNvic1);
-}
-
-void EXTI0_IRQHandler(void)
-{
-	if(EXTI_GetITStatus(EXTI_Line0)!=RESET)
-	{
-		delay_10_us(26);
-		if(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_0))
-		{
-			
-		}
-		EXTI_ClearITPendingBit(EXTI_Line0);
-	}
-}
-
-void EXTI1_IRQHandler(void)
-{
-	if(EXTI_GetITStatus(EXTI_Line1)!=RESET)
-	{
-		delay_10_us(26);
-		if(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_1))
-		{
-			
-		}
-		EXTI_ClearITPendingBit(EXTI_Line1);
-	}
 }
 
 void request_dht11(void)
@@ -334,4 +290,98 @@ void timer3_pwm_sg90(void)
 	TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
 	
 	GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_TIM3);
+}
+
+void timer7_interrput(void)
+{
+	//interrupt every 2s
+	
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7,ENABLE);
+	
+	TIM_TimeBaseInitTypeDef myTim7;
+	myTim7.TIM_Prescaler = 8400-1;
+	myTim7.TIM_Period = 20000-1;
+	myTim7.TIM_CounterMode = TIM_CounterMode_Up;
+	TIM_TimeBaseInit(TIM7,&myTim7);
+	TIM_ITConfig(TIM7,TIM_IT_Update,ENABLE);
+	TIM_Cmd(TIM7,ENABLE);
+
+	NVIC_InitTypeDef myNvic;
+	myNvic.NVIC_IRQChannel = TIM7_IRQn;
+	myNvic.NVIC_IRQChannelPreemptionPriority = 1;
+	myNvic.NVIC_IRQChannelSubPriority = 0;
+	myNvic.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&myNvic);
+}
+void gpio_init(void)
+{
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB,ENABLE);
+	
+	GPIO_InitTypeDef myGPIO;
+	myGPIO.GPIO_Mode = GPIO_Mode_OUT;
+	myGPIO.GPIO_OType = GPIO_OType_PP;
+	myGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	myGPIO.GPIO_Speed = GPIO_High_Speed;
+	myGPIO.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2;
+	GPIO_Init(GPIOB,&myGPIO);
+}
+void uart2_init(void)
+{
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2,ENABLE);
+	USART_InitTypeDef myUart;
+	myUart.USART_BaudRate = 9600;
+	myUart.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+	myUart.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
+	myUart.USART_Parity = USART_Parity_No;
+	myUart.USART_StopBits = USART_StopBits_1;
+	myUart.USART_WordLength = USART_WordLength_8b;
+	USART_Init(USART2,&myUart);
+	USART_Cmd(USART2,ENABLE);
+	
+	USART_ITConfig(USART2,USART_IT_RXNE,ENABLE);
+	
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA,ENABLE);
+	GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF; //This is important. We will this pin except of INPUT, OUTPUT and ANALOG so we set as Alternate Function
+	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_2 | GPIO_Pin_3;   //Communicate on PA2 and PA3
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;//We set the pin as Push Pull
+	GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP; //And Pull Up. Keep it always on HIGH
+	GPIO_InitStructure.GPIO_Speed	= GPIO_Speed_50MHz; //And pin frequency
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_USART2);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_USART2);
+	
+	NVIC_InitTypeDef myNvic;
+	myNvic.NVIC_IRQChannel = USART2_IRQn;
+	myNvic.NVIC_IRQChannelPreemptionPriority = 1;
+	myNvic.NVIC_IRQChannelSubPriority = 1;
+	myNvic.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&myNvic);
+	
+	USART_Cmd(USART2,ENABLE);
+}
+void usart_send_char(char data)
+{
+	while(!(USART2->SR & 0x00000040));
+	USART_SendData(USART2,data);
+}
+void usart_send_string(char *s)
+{
+	while(*s)
+	{
+		usart_send_char(*s);
+		s++;
+	}
+}
+
+//interrupt program
+void TIM7_IRQHandler(void)
+{
+	if (TIM_GetITStatus(TIM7, TIM_IT_Update) != RESET)
+	{
+		TIM_ClearITPendingBit(TIM7, TIM_IT_Update);
+		GPIO_ToggleBits(GPIOD, GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15);
+		readDHT11();
+	}
 }
