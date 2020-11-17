@@ -39,29 +39,28 @@ void uart2_init(void);
 void usart_send_char(char data);
 void usart_send_string(char *s);
 
-uint8_t c, I_RH, D_RH, I_Temp, D_Temp, CheckSum;
+uint8_t c, I_RH=0, D_RH, I_Temp=0, D_Temp, CheckSum;
 
 uint16_t gas_sensor_value;
 uint16_t water_sensor_value;
 
-char buffer[20];
-uint16_t test=123;
+volatile char data_receive;
+char buffer[4];
+uint16_t test=11;
 float test1=123.45;
+
 
 int main(void)
 {	
-	
+	gpio_init();
 	timer6_delay_init();
 	/*
 	gas_sensor_init();
   water_sensor_init();
 	timer3_pwm_sg90();
-	
+	*/
 	led_init();
 	//timer7_interrput();
-	
-	gpio_init();
-	*/
 	uart2_init();
 	while(1)
 	{
@@ -78,12 +77,15 @@ int main(void)
 		water_sensor_value = read_water_sensor();
 		
 		*/
-		test++;
-		sprintf(buffer,"a%dz",test);
-		//sprintf(buffer,"%.2lf",test1);
+		
+		//readDHT11();
+		I_RH=32;
+		sprintf(buffer,"a%dz",I_Temp);
 		usart_send_string(buffer);
-		//usart_send_char('9');
-		delay_10_us(200000);
+		sprintf(buffer,"b%dy",I_RH);
+		usart_send_string(buffer);
+
+		delay_10_us(200000); //2s
 	}
 }
 
@@ -188,6 +190,8 @@ void readDHT11(void)
 		{
 			
 		}
+		
+
 }
 void gas_sensor_init(void)
 {
@@ -376,12 +380,43 @@ void usart_send_string(char *s)
 }
 
 //interrupt program
-void TIM7_IRQHandler(void)
+void TIM7_IRQHandler(void) //2s
 {
 	if (TIM_GetITStatus(TIM7, TIM_IT_Update) != RESET)
 	{
 		TIM_ClearITPendingBit(TIM7, TIM_IT_Update);
 		GPIO_ToggleBits(GPIOD, GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15);
-		readDHT11();
+
+	}
+}
+void USART2_IRQHandler(void)
+{
+	if(USART_GetITStatus(USART2, USART_IT_RXNE) == SET)
+	{
+		data_receive = USART_ReceiveData(USART2);
+		
+		switch(data_receive)
+		{
+			case 'a':
+				GPIO_SetBits(GPIOD, GPIO_Pin_12);
+				break;
+			
+			case 'A':
+				GPIO_ResetBits(GPIOD, GPIO_Pin_12);
+				break;
+			
+			case 'b':
+				GPIO_SetBits(GPIOD, GPIO_Pin_13);
+				break;
+			
+			case 'B':
+				GPIO_ResetBits(GPIOD, GPIO_Pin_13);
+				break;
+			
+			default:
+				break;
+		}
+		
+		USART_ClearITPendingBit(USART2,USART_IT_RXNE);
 	}
 }
