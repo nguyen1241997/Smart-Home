@@ -3,6 +3,15 @@
 #include "stm32f4xx_tim.h"
 #include "stm32f4xx_exti.h"
 
+#define led_LVR_pin			GPIO_Pin_0
+#define led_KCR_pin			GPIO_Pin_1
+#define led_BedR_pin		GPIO_Pin_2
+#define led_BaR_pin			GPIO_Pin_3
+#define led_Garage_pin	GPIO_Pin_4
+#define fan_LVR_pin			GPIO_Pin_5
+#define fan_KCR_pin			GPIO_Pin_6
+#define fan_BedR_pin		GPIO_Pin_7
+
 /*
 -PA6: DHT11
 -PA7: gas sensor
@@ -41,17 +50,23 @@ void usart_send_string(char *s);
 
 uint8_t c, I_RH=0, D_RH, I_Temp=0, D_Temp, CheckSum;
 
+
 uint16_t gas_sensor_value;
 uint16_t water_sensor_value;
 
 volatile char data_receive;
-char buffer[4];
+char buffer[10];
 uint16_t test=11;
 float test1=123.45;
+
+char state_led_LVR=0, state_led_KCR=0, state_led_BedR=0, state_led_BaR=0, state_led_Garage=0;
+char state_fan_LVR=0, state_fan_KCR=0, state_fan_BedR=0;
 
 
 int main(void)
 {	
+	I_RH=68;
+	I_Temp=32;
 	gpio_init();
 	timer6_delay_init();
 	/*
@@ -79,13 +94,186 @@ int main(void)
 		*/
 		
 		//readDHT11();
-		I_RH=32;
-		sprintf(buffer,"a%dz",I_Temp);
+		
+		I_RH++;
+		I_Temp++;
+		if (I_RH>255) I_RH=0;
+		if (I_Temp>255) I_RH=0;
+		sprintf(buffer,"Z%dz",I_Temp);
 		usart_send_string(buffer);
-		sprintf(buffer,"b%dy",I_RH);
+		sprintf(buffer,"Y%dy",I_RH);
 		usart_send_string(buffer);
-
-		delay_10_us(200000); //2s
+		
+		
+		buffer[0]='X';
+		state_led_LVR = GPIO_ReadOutputDataBit(GPIOB, led_LVR_pin);
+		if(state_led_LVR)
+		{
+			buffer[1]='M';
+		}
+		else
+		{
+			buffer[1]='m';
+		}
+		
+		state_led_KCR = GPIO_ReadOutputDataBit(GPIOB, led_KCR_pin);
+		if(state_led_KCR)
+		{
+			buffer[2]='N';
+		}
+		else
+		{
+			buffer[2]='n';
+		}
+		
+		state_led_BedR = GPIO_ReadOutputDataBit(GPIOB, led_BedR_pin);
+		if(state_led_BedR)
+		{
+			buffer[3]='O';
+		}
+		else
+		{
+			buffer[3]='o';
+		}
+		
+		state_led_BaR = GPIO_ReadOutputDataBit(GPIOB, led_BaR_pin);
+		if(state_led_BaR)
+		{
+			buffer[4]='P';
+		}
+		else
+		{
+			buffer[4]='p';
+		}
+		
+		state_led_Garage = GPIO_ReadOutputDataBit(GPIOB, led_Garage_pin);
+		if(state_led_Garage)
+		{
+			buffer[5]='Q';
+		}
+		else
+		{
+			buffer[5]='q';
+		}
+		
+		state_fan_LVR = GPIO_ReadOutputDataBit(GPIOB, fan_LVR_pin);
+		if(state_fan_LVR)
+		{
+			buffer[6]='R';
+		}
+		else
+		{
+			buffer[6]='r';
+		}
+		
+		state_fan_KCR = GPIO_ReadOutputDataBit(GPIOB, fan_KCR_pin);
+		if(state_fan_KCR)
+		{
+			buffer[7]='S';
+		}
+		else
+		{
+			buffer[7]='s';
+		}
+		
+		state_fan_BedR = GPIO_ReadOutputDataBit(GPIOB, fan_BedR_pin);
+		if(state_fan_BedR)
+		{
+			buffer[8]='T';
+		}
+		else
+		{
+			buffer[8]='t';
+		}	
+		
+		buffer[9]='x';
+		usart_send_string(buffer);
+		
+		// send state of led, fan to esp8266
+		/*
+		state_led_LVR = GPIO_ReadOutputDataBit(GPIOB, led_LVR_pin);
+		if(state_led_LVR)
+		{
+			usart_send_char('M');
+		}
+		else
+		{
+			usart_send_char('m');
+		}
+		
+		state_led_KCR = GPIO_ReadOutputDataBit(GPIOB, led_KCR_pin);
+		if(state_led_KCR)
+		{
+			usart_send_char('N');
+		}
+		else
+		{
+			usart_send_char('n');
+		}
+		
+		state_led_BedR = GPIO_ReadOutputDataBit(GPIOB, led_BedR_pin);
+		if(state_led_BedR)
+		{
+			usart_send_char('O');
+		}
+		else
+		{
+			usart_send_char('o');
+		}
+		
+		state_led_BaR = GPIO_ReadOutputDataBit(GPIOB, led_BaR_pin);
+		if(state_led_BaR)
+		{
+			usart_send_char('P');
+		}
+		else
+		{
+			usart_send_char('p');
+		}
+		
+		state_led_Garage = GPIO_ReadOutputDataBit(GPIOB, led_Garage_pin);
+		if(state_led_Garage)
+		{
+			usart_send_char('Q');
+		}
+		else
+		{
+			usart_send_char('q');
+		}
+		
+		state_fan_LVR = GPIO_ReadOutputDataBit(GPIOB, fan_LVR_pin);
+		if(state_fan_LVR)
+		{
+			usart_send_char('R');
+		}
+		else
+		{
+			usart_send_char('r');
+		}
+		
+		state_fan_KCR = GPIO_ReadOutputDataBit(GPIOB, fan_KCR_pin);
+		if(state_fan_KCR)
+		{
+			usart_send_char('S');
+		}
+		else
+		{
+			usart_send_char('s');
+		}
+		
+		state_fan_BedR = GPIO_ReadOutputDataBit(GPIOB, fan_BedR_pin);
+		state_fan_BedR=1;
+		if(state_fan_BedR)
+		{
+			usart_send_char('T');
+		}
+		else
+		{
+			usart_send_char('t');
+		}	
+		
+		*/
+		delay_10_us(900000); //2s
 	}
 }
 
@@ -326,7 +514,7 @@ void gpio_init(void)
 	myGPIO.GPIO_OType = GPIO_OType_PP;
 	myGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	myGPIO.GPIO_Speed = GPIO_High_Speed;
-	myGPIO.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2;
+	myGPIO.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7;
 	GPIO_Init(GPIOB,&myGPIO);
 }
 void uart2_init(void)
@@ -397,20 +585,68 @@ void USART2_IRQHandler(void)
 		
 		switch(data_receive)
 		{
-			case 'a':
-				GPIO_SetBits(GPIOD, GPIO_Pin_12);
-				break;
-			
 			case 'A':
-				GPIO_ResetBits(GPIOD, GPIO_Pin_12);
+				GPIO_SetBits(GPIOB, led_LVR_pin);
 				break;
 			
-			case 'b':
-				GPIO_SetBits(GPIOD, GPIO_Pin_13);
+			case 'a':
+				GPIO_ResetBits(GPIOB, led_LVR_pin);
 				break;
 			
 			case 'B':
-				GPIO_ResetBits(GPIOD, GPIO_Pin_13);
+				GPIO_SetBits(GPIOB, led_KCR_pin);
+				break;
+			
+			case 'b':
+				GPIO_ResetBits(GPIOB, led_KCR_pin);
+				break;
+			
+			case 'C':
+				GPIO_SetBits(GPIOB, led_BedR_pin);
+				break;
+			
+			case 'c':
+				GPIO_ResetBits(GPIOB, led_BedR_pin);
+				break;
+			
+			case 'D':
+				GPIO_SetBits(GPIOB, led_BaR_pin);
+				break;
+			
+			case 'd':
+				GPIO_ResetBits(GPIOB, led_BaR_pin);
+				break;
+			
+			case 'E':
+				GPIO_SetBits(GPIOB, led_Garage_pin);
+				break;
+			
+			case 'e':
+				GPIO_ResetBits(GPIOB, led_Garage_pin);
+				break;
+			
+			case 'F':
+				GPIO_SetBits(GPIOB, fan_LVR_pin);
+				break;
+			
+			case 'f':
+				GPIO_ResetBits(GPIOB, fan_LVR_pin);
+				break;
+			
+			case 'G':
+				GPIO_SetBits(GPIOB, fan_KCR_pin);
+				break;
+			
+			case 'g':
+				GPIO_ResetBits(GPIOB, fan_KCR_pin);
+				break;
+			
+			case 'H':
+				GPIO_SetBits(GPIOB, fan_BedR_pin);
+				break;
+			
+			case 'h':
+				GPIO_ResetBits(GPIOB, fan_BedR_pin);
 				break;
 			
 			default:

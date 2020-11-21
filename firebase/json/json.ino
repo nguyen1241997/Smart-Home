@@ -5,6 +5,8 @@
  
 SoftwareSerial mySerial(4,5); // RX, TX
 
+//const String wifiName = "CanHo Truong Thinh 2";
+//const String password = "truongthinh25";
 const String wifiName = "nguyen124";
 const String password = "12345678";
 
@@ -12,6 +14,7 @@ int temp,humi;
 char bf[20];
 int i=0;
 char x=50;
+int l=0;
 
 void setup()
 {
@@ -34,8 +37,6 @@ void loop()
 {
   if (mySerial.available() > 0)
   {
-    Serial.println("HI");
-    //delay(20);
     while (mySerial.available() > 0)
     {
       //delele buffer
@@ -45,9 +46,10 @@ void loop()
       }
       
       char ch = mySerial.read();
+      Serial.println(ch);
 
       //temparature
-      if (ch=='a') 
+      if (ch=='Z') 
       {
         i=0;
         while(1)
@@ -63,7 +65,7 @@ void loop()
       }
 
       //humidity
-      if (ch=='b') 
+      if (ch=='Y') 
       {
         i=0;
         while(1)
@@ -77,141 +79,182 @@ void loop()
         humi = bf[0]*10 + bf[1];
         Serial.println();
       }
+
+      
+/*
+      if (ch=='M')
+      {
+        Firebase.setInt("state_led_LVR",1);
+      }
+      else if (ch=='m')
+      {
+        Firebase.setInt("state_led_LVR",0);
+      }
+
+      if (ch=='N')
+      {
+        Firebase.setInt("state_led_KCR",1);
+      }
+      else if (ch=='n')
+      {
+        Firebase.setInt("state_led_KCR",0);
+      }
+
+      if (ch=='O')
+      {
+        Firebase.setInt("state_led_BedR",1);
+      }
+      else if (ch=='o')
+      {
+        Firebase.setInt("state_led_BedR",0);
+      }
+
+      if (ch=='P')
+      {
+        Firebase.setInt("state_led_BaR",1);
+      }
+      else if (ch=='P')
+      {
+        Firebase.setInt("state_led_BaR",0);
+      }
+
+      if (ch=='Q')
+      {
+        Firebase.setInt("state_led_Garage",1);
+      }
+      else if (ch=='q')
+      {
+        Firebase.setInt("state_led_Garage",0);
+      }
+
+      if (ch=='R')
+      {
+        Firebase.setInt("state_fan_LVR",1);
+      }
+      else if (ch=='r')
+      {
+        Firebase.setInt("state_fan_LVR",0);
+      }
+
+      if (ch=='S')
+      {
+        Firebase.setInt("state_fan_KCR",1);
+      }
+      else if (ch=='s')
+      {
+        Firebase.setInt("state_fan_KCR",0);
+      }
+
+      if (ch=='T')
+      {
+        Firebase.setInt("state_fan_BedR",1);
+      }
+      else if (ch=='t')
+      {
+        Firebase.setInt("state_fan_BedR",0);
+      }
+      
+*/
     }
   }
-  
-
-  Firebase.setInt("temparature",temp);
-  Firebase.setInt("humidity",humi);
 
 
 
-  if(Firebase.getString("control_door")=="\"1\"")
-  {
-    mySerial.write('a');
-  }
-  else
+ // Firebase.setInt("temparature",temp);
+ // Firebase.setInt("humidity",humi);
+
+
+  if(Firebase.getString("control_led_LVR")=="\"1\"")
   {
     mySerial.write('A');
   }
-
-  if(Firebase.getString("control_fan_BedR")=="\"1\"")
-  {
-    mySerial.write('b');
-  }
   else
   {
-    mySerial.write('B');
-  }
-
-  if(Firebase.getString("control_fan_KCR")=="\"1\"")
-  {
-    mySerial.write('c');
-  }
-  else
-  {
-    mySerial.write('C');
-  }
-
-  if(Firebase.getString("control_fan_LVR")=="\"1\"")
-  {
-    mySerial.write('e');
-  }
-  else
-  {
-    mySerial.write('E');
-  }
-
-  if(Firebase.getString("control_led_BaR")=="\"1\"")
-  {
-    mySerial.write('f');
-  }
-  else
-  {
-    mySerial.write('F');
-  }
-
-  if(Firebase.getString("control_led_BedR")=="\"1\"")
-  {
-    mySerial.write('g');
-  }
-  else
-  {
-    mySerial.write('G');
+    mySerial.write('a');
   }
 
   if(Firebase.getString("control_led_KCR")=="\"1\"")
   {
-    mySerial.write('h');
+    mySerial.write('B');
   }
   else
+  {
+    mySerial.write('b');
+  }
+
+  if(Firebase.getString("control_led_BedR")=="\"1\"")
+  {
+    mySerial.write('C');
+  }
+  else
+  {
+    mySerial.write('c');
+  }
+
+  if(Firebase.getString("control_led_BaR")=="\"1\"")
+  {
+    mySerial.write('D');
+  }
+  else
+  {
+    mySerial.write('d');
+  }
+  
+  if(Firebase.getString("control_led_garage")=="\"1\"")
+  {
+    mySerial.write('E');
+  }
+  else
+  {
+    mySerial.write('e');
+  }
+
+  if(Firebase.getString("control_fan_LVR")=="\"1\"")
+  {
+    mySerial.write('F');
+  }
+  else
+  {
+    mySerial.write('f');
+  }
+
+  if(Firebase.getString("control_fan_KCR")=="\"1\"")
+  {
+    mySerial.write('G');
+  }
+  else
+  {
+    mySerial.write('g');
+  }
+
+  if(Firebase.getString("control_fan_BedR")=="\"1\"")
   {
     mySerial.write('H');
   }
-
-  if(Firebase.getString("control_led_LVR")=="\"1\"")
-  {
-    mySerial.write('i');
-  }
   else
+  {
+    mySerial.write('h');
+  }
+
+  if(Firebase.getString("control_door")=="\"1\"")
   {
     mySerial.write('I');
   }
-
-  if(Firebase.getString("control_led_garage")=="\"1\"")
-  {
-    mySerial.write('j');
-  }
   else
   {
-    mySerial.write('J');
+    mySerial.write('i');
   }
 
   if(Firebase.getString("control_window")=="\"1\"")
   {
-    mySerial.write('k');
+    mySerial.write('J');
   }
   else
   {
-    mySerial.write('K');
+    mySerial.write('j');
   }
-
-  
-
-  /*
-
-  Serial.println(Firebase.getString("led1Control"));
-
-  
-
-  //led 1 control
-  if(Firebase.getString("led1Control")=="\"1\"")
-  {
-    Firebase.setInt("led1State",1);
-    digitalWrite(D1,HIGH);
-    Serial.println("led 1 on");
-  }
-  else
-  {
-    Firebase.setInt("led1State",0);
-    digitalWrite(D1,LOW);
-    Serial.println("led 1 off");
-  }
-
-  //led 2 control
-  if(Firebase.getString("led2Control")=="\"1\"")
-  {
-    Firebase.setInt("led2State",1);
-    digitalWrite(D2,HIGH);
-    Serial.println("led 2 on");
-  }
-  else
-  {
-    Firebase.setInt("led2State",0);
-    digitalWrite(D2,LOW);
-    Serial.println("led 2 off");
-  }
-  */
-  
-  delay(20);
+ 
+  //delay(1000);
+  l++;
+  Serial.println(l);
 }
