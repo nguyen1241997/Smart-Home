@@ -10,7 +10,7 @@ SoftwareSerial mySerial(4,5); // RX, TX
 const String wifiName = "nguyen124";
 const String password = "12345678";
 
-int temp,humi;
+int temp,humi,gas;
 char bf[20];
 int l=0;
 int i=0;
@@ -49,14 +49,14 @@ void loop()
       Serial.println(ch);
 
       //temparature
-      if (ch=='Z') 
+      if (ch=='#') 
       {
         i=0;
         while(1)
         {
           ch = mySerial.read();
           Serial.print(ch);
-          if (ch=='z') break;
+          if (ch=='$') break;
           bf[i]= ch-48;
           i++;                  
         }
@@ -65,14 +65,14 @@ void loop()
       }
 
       //humidity
-      if (ch=='Y') 
+      if (ch=='^') 
       {
         i=0;
         while(1)
         {
           ch = mySerial.read();
           Serial.print(ch);
-          if (ch=='y') break;
+          if (ch=='*') break;
           bf[i]= ch-48;
           i++;                  
         }
@@ -80,14 +80,30 @@ void loop()
         Serial.println();
       }
 
-      if (ch=='X') 
+      if (ch=='!') //gas sensor
       {
         i=0;
         while(1)
         {
           ch = mySerial.read();
           Serial.print(ch);
-          if (ch=='x') break;
+          if (ch=='@') break;
+          bf[i]= ch-48;
+          i++;                  
+        }
+        gas = bf[0]*1000 + bf[1]*100 + bf[2]*10 + bf[3];
+        Serial.println();
+      }
+
+      //gpio
+      if (ch=='(') 
+      {
+        i=0;
+        while(1)
+        {
+          ch = mySerial.read();
+          Serial.print(ch);
+          if (ch==')') break;
           bf[i]= ch;
           i++;                     
         }
@@ -95,7 +111,7 @@ void loop()
       }
 
       
-
+      //send gpio state to firebase
       if (bf[0]=='M')
       {
         Firebase.setInt("state_led_LVR",1);
@@ -167,17 +183,43 @@ void loop()
       {
         Firebase.setInt("state_fan_BedR",0);
       }
-  
 
+      if (bf[8]=='U')
+      {
+        Firebase.setInt("state_door_garage",1);
+      }
+      else if (bf[8]=='u')
+      {
+        Firebase.setInt("state_door_garage",0);
+      }
+
+      if (bf[9]=='V')
+      {
+        Firebase.setInt("state_clothes",1);
+      }
+      else if (bf[9]=='v')
+      {
+        Firebase.setInt("state_clothes",0);
+      }
+
+      if (bf[10]=='W')
+      {
+        Firebase.setInt("state_window",1);
+      }
+      else if (bf[10]=='w')
+      {
+        Firebase.setInt("state_window",0);
+      }
     }
   }
 
-
-
+  //send data to firebase
   Firebase.setInt("temparature",temp);
   Firebase.setInt("humidity",humi);
+  Firebase.setInt("gas_sensor",gas);
 
-Serial.println("aaaaaaaaaaaaaaa");
+  //get data from firebase
+  Serial.println("aaaaaaaaaaaaaaa");
   if(Firebase.getString("control_led_LVR")=="\"1\"")
   {
     mySerial.write('A');
@@ -251,7 +293,7 @@ Serial.println("aaaaaaaaaaaaaaa");
     mySerial.write('h');
   }
 
-  if(Firebase.getString("control_door")=="\"1\"")
+  if(Firebase.getString("control_door_garage")=="\"1\"")
   {
     mySerial.write('I');
   }
@@ -260,7 +302,7 @@ Serial.println("aaaaaaaaaaaaaaa");
     mySerial.write('i');
   }
 
-  if(Firebase.getString("control_window")=="\"1\"")
+  if(Firebase.getString("control_clothes")=="\"1\"")
   {
     mySerial.write('J');
   }
@@ -268,8 +310,16 @@ Serial.println("aaaaaaaaaaaaaaa");
   {
     mySerial.write('j');
   }
- Serial.println("bbbbbbbbbbbbbbbb");
+
+  if(Firebase.getString("control_window")=="\"1\"")
+  {
+    mySerial.write('K');
+  }
+  else
+  {
+    mySerial.write('k');
+  }
+  
+  Serial.println("bbbbbbbbbbbbbbbb");
   delay(1000);
-  //l++;
-  //Serial.println(l);
 }

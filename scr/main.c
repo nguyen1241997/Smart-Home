@@ -50,18 +50,15 @@ void usart_send_string(char *s);
 
 uint8_t c, I_RH=0, D_RH, I_Temp=0, D_Temp, CheckSum;
 
-
 uint16_t gas_sensor_value;
 uint16_t water_sensor_value;
 
 volatile char data_receive;
-char buffer[10];
-uint16_t test=11;
-float test1=123.45;
+char buffer[20];
 
 char state_led_LVR=0, state_led_KCR=0, state_led_BedR=0, state_led_BaR=0, state_led_Garage=0;
 char state_fan_LVR=0, state_fan_KCR=0, state_fan_BedR=0;
-
+char state_door_garage=0, state_clothes=0, state_window=0;
 
 int main(void)
 {	
@@ -69,29 +66,40 @@ int main(void)
 	I_Temp=32;
 	gpio_init();
 	timer6_delay_init();
-	/*
+	
 	gas_sensor_init();
-  water_sensor_init();
+	
+  //water_sensor_init();
 	timer3_pwm_sg90();
-	*/
+	
 	led_init();
 	//timer7_interrput();
 	uart2_init();
 	while(1)
 	{
-		/*
 		gas_sensor_value = read_gas_sensor();
+		sprintf(buffer,"!%d@",gas_sensor_value);
+		usart_send_string(buffer);
+		
 		if (gas_sensor_value>2500)
 		{
-			TIM_SetCompare1(TIM3,140);
+			//TIM_SetCompare1(TIM3,140);
 		}
 		else
 		{
-			TIM_SetCompare1(TIM3,80);
+			//TIM_SetCompare1(TIM3,80);
 		}
-		water_sensor_value = read_water_sensor();
 		
-		*/
+		water_sensor_value = read_water_sensor();
+		if (water_sensor_value>2500)
+		{
+			//TIM_SetCompare2(TIM3,140);
+		}
+		else
+		{
+			//TIM_SetCompare2(TIM3,80);
+		}
+		
 		
 		//readDHT11();
 		
@@ -99,13 +107,13 @@ int main(void)
 		I_Temp++;
 		if (I_RH>255) I_RH=0;
 		if (I_Temp>255) I_RH=0;
-		sprintf(buffer,"Z%dz",I_Temp);
+		sprintf(buffer,"#%d$",I_Temp);
 		usart_send_string(buffer);
-		sprintf(buffer,"Y%dy",I_RH);
+		sprintf(buffer,"^%d*",I_RH);
 		usart_send_string(buffer);
 		
 		
-		buffer[0]='X';
+		buffer[0]='(';
 		state_led_LVR = GPIO_ReadOutputDataBit(GPIOB, led_LVR_pin);
 		if(state_led_LVR)
 		{
@@ -184,96 +192,40 @@ int main(void)
 		else
 		{
 			buffer[8]='t';
-		}	
+		}
+
+		if(state_door_garage)
+		{
+			buffer[9]='U';
+		}
+		else
+		{
+			buffer[9]='u';
+		}
+
+		if(state_clothes)
+		{
+			buffer[10]='V';
+		}
+		else
+		{
+			buffer[10]='v';
+		}
+
+		if(state_window)
+		{
+			buffer[11]='W';
+		}
+		else
+		{
+			buffer[11]='w';
+		}
 		
-		buffer[9]='x';
+		buffer[12]=')';
 		usart_send_string(buffer);
 		
-		// send state of led, fan to esp8266
-		/*
-		state_led_LVR = GPIO_ReadOutputDataBit(GPIOB, led_LVR_pin);
-		if(state_led_LVR)
-		{
-			usart_send_char('M');
-		}
-		else
-		{
-			usart_send_char('m');
-		}
 		
-		state_led_KCR = GPIO_ReadOutputDataBit(GPIOB, led_KCR_pin);
-		if(state_led_KCR)
-		{
-			usart_send_char('N');
-		}
-		else
-		{
-			usart_send_char('n');
-		}
-		
-		state_led_BedR = GPIO_ReadOutputDataBit(GPIOB, led_BedR_pin);
-		if(state_led_BedR)
-		{
-			usart_send_char('O');
-		}
-		else
-		{
-			usart_send_char('o');
-		}
-		
-		state_led_BaR = GPIO_ReadOutputDataBit(GPIOB, led_BaR_pin);
-		if(state_led_BaR)
-		{
-			usart_send_char('P');
-		}
-		else
-		{
-			usart_send_char('p');
-		}
-		
-		state_led_Garage = GPIO_ReadOutputDataBit(GPIOB, led_Garage_pin);
-		if(state_led_Garage)
-		{
-			usart_send_char('Q');
-		}
-		else
-		{
-			usart_send_char('q');
-		}
-		
-		state_fan_LVR = GPIO_ReadOutputDataBit(GPIOB, fan_LVR_pin);
-		if(state_fan_LVR)
-		{
-			usart_send_char('R');
-		}
-		else
-		{
-			usart_send_char('r');
-		}
-		
-		state_fan_KCR = GPIO_ReadOutputDataBit(GPIOB, fan_KCR_pin);
-		if(state_fan_KCR)
-		{
-			usart_send_char('S');
-		}
-		else
-		{
-			usart_send_char('s');
-		}
-		
-		state_fan_BedR = GPIO_ReadOutputDataBit(GPIOB, fan_BedR_pin);
-		state_fan_BedR=1;
-		if(state_fan_BedR)
-		{
-			usart_send_char('T');
-		}
-		else
-		{
-			usart_send_char('t');
-		}	
-		
-		*/
-		delay_10_us(900000); //2s
+		delay_10_us(900000); //2s=200000
 	}
 }
 
@@ -390,7 +342,7 @@ void gas_sensor_init(void)
 	myGPIO.GPIO_OType = GPIO_OType_PP;
 	myGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	myGPIO.GPIO_Speed = GPIO_Low_Speed;
-	myGPIO.GPIO_Pin = GPIO_Pin_7;
+	myGPIO.GPIO_Pin = GPIO_Pin_7 | GPIO_Pin_8;
 	GPIO_Init(GPIOA,&myGPIO);
 	
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
@@ -399,10 +351,11 @@ void gas_sensor_init(void)
 	myADC.ADC_ContinuousConvMode = DISABLE;
 	myADC.ADC_DataAlign = ADC_DataAlign_Right;
 	myADC.ADC_Resolution = ADC_Resolution_12b;
-	myADC.ADC_NbrOfConversion = 1;
+	myADC.ADC_NbrOfConversion = 2;
 	ADC_Init(ADC1,&myADC);	
 	
 	ADC_RegularChannelConfig (ADC1,ADC_Channel_7,1,ADC_SampleTime_144Cycles);
+	ADC_RegularChannelConfig (ADC1,ADC_Channel_8,2,ADC_SampleTime_144Cycles);
 	ADC_ITConfig(ADC1,ADC_IT_EOC,ENABLE);
 	ADC_Cmd(ADC1,ENABLE);
 
@@ -461,7 +414,7 @@ void timer3_pwm_sg90(void)
 	myGPIO.GPIO_OType = GPIO_OType_PP;
 	myGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	myGPIO.GPIO_Speed = GPIO_Low_Speed;
-	myGPIO.GPIO_Pin = GPIO_Pin_6;
+	myGPIO.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
 	GPIO_Init(GPIOC,&myGPIO);
 	
 	TIM_TimeBaseInitTypeDef myTimer;
@@ -478,10 +431,13 @@ void timer3_pwm_sg90(void)
 	myPWM.TIM_Pulse = 0;
 	myPWM.TIM_OutputState = TIM_OutputState_Enable;
 	TIM_OC1Init(TIM3,&myPWM);
+	TIM_OC2Init(TIM3,&myPWM);
 	
 	TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
+	TIM_OC2PreloadConfig(TIM3, TIM_OCPreload_Enable);
 	
 	GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_TIM3);
+	GPIO_PinAFConfig(GPIOC, GPIO_PinSource7, GPIO_AF_TIM3);
 }
 
 void timer7_interrput(void)
@@ -574,7 +530,7 @@ void TIM7_IRQHandler(void) //2s
 	{
 		TIM_ClearITPendingBit(TIM7, TIM_IT_Update);
 		GPIO_ToggleBits(GPIOD, GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15);
-
+		gas_sensor_value = read_gas_sensor();
 	}
 }
 void USART2_IRQHandler(void)
@@ -647,6 +603,30 @@ void USART2_IRQHandler(void)
 			
 			case 'h':
 				GPIO_ResetBits(GPIOB, fan_BedR_pin);
+				break;
+			
+			case 'I':
+				state_door_garage=1;
+				break;
+			
+			case 'i':
+				state_door_garage=0;
+				break;
+			
+			case 'J':
+				state_clothes=1;
+				break;
+			
+			case 'j':
+				state_clothes=0;
+				break;
+			
+			case 'K':
+				state_window=1;
+				break;
+			
+			case 'k':
+				state_window=0;
 				break;
 			
 			default:
