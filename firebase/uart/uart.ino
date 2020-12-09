@@ -5,10 +5,10 @@
  
 SoftwareSerial mySerial(4,5); // RX, TX
 
-//const String wifiName = "CanHo Truong Thinh 2";
-//const String password = "truongthinh25";
-const String wifiName = "nguyen124";
-const String password = "12345678";
+const String wifiName = "CanHo Truong Thinh 2";
+const String password = "truongthinh25";
+//const String wifiName = "nguyen124";
+//const String password = "12345678";
 
 int temp,humi,gas;
 char bf[20];
@@ -35,6 +35,8 @@ void setup()
 
 void loop()
 {
+  Serial.println("aaaaaaaaaaaaaaa");
+  
   if (mySerial.available() > 0)
   {
     while (mySerial.available() > 0)
@@ -219,8 +221,8 @@ void loop()
   Firebase.setInt("gas_sensor",gas);
 
   //get data from firebase
-  Serial.println("aaaaaaaaaaaaaaa");
-  if(Firebase.getString("control_led_LVR")=="\"1\"")
+  
+  if(Firebase.getString("control_led_LVR")=="1")
   {
     mySerial.write('A');
   }
@@ -229,7 +231,7 @@ void loop()
     mySerial.write('a');
   }
 
-  if(Firebase.getString("control_led_KCR")=="\"1\"")
+  if(Firebase.getString("control_led_KCR")=="1")
   {
     mySerial.write('B');
   }
@@ -239,7 +241,7 @@ void loop()
   }
   
 
-  if(Firebase.getString("control_led_BedR")=="\"1\"")
+  if(Firebase.getString("control_led_BedR")=="1")
   {
     mySerial.write('C');
   }
@@ -248,7 +250,7 @@ void loop()
     mySerial.write('c');
   }
 
-  if(Firebase.getString("control_led_BaR")=="\"1\"")
+  if(Firebase.getString("control_led_BaR")=="1")
   {
     mySerial.write('D');
   }
@@ -257,7 +259,7 @@ void loop()
     mySerial.write('d');
   }
   
-  if(Firebase.getString("control_led_garage")=="\"1\"")
+  if(Firebase.getString("control_led_garage")=="1")
   {
     mySerial.write('E');
   }
@@ -266,7 +268,7 @@ void loop()
     mySerial.write('e');
   }
 
-  if(Firebase.getString("control_fan_LVR")=="\"1\"")
+  if(Firebase.getString("control_fan_LVR")=="1")
   {
     mySerial.write('F');
   }
@@ -275,7 +277,7 @@ void loop()
     mySerial.write('f');
   }
 
-  if(Firebase.getString("control_fan_KCR")=="\"1\"")
+  if(Firebase.getString("control_fan_KCR")=="1")
   {
     mySerial.write('G');
   }
@@ -284,7 +286,7 @@ void loop()
     mySerial.write('g');
   }
 
-  if(Firebase.getString("control_fan_BedR")=="\"1\"")
+  if(Firebase.getString("control_fan_BedR")=="1")
   {
     mySerial.write('H');
   }
@@ -293,7 +295,7 @@ void loop()
     mySerial.write('h');
   }
 
-  if(Firebase.getString("control_door_garage")=="\"1\"")
+  if(Firebase.getString("control_door_garage")=="1")
   {
     mySerial.write('I');
   }
@@ -302,7 +304,7 @@ void loop()
     mySerial.write('i');
   }
 
-  if(Firebase.getString("control_clothes")=="\"1\"")
+  if(Firebase.getString("control_clothes")=="1")
   {
     mySerial.write('J');
   }
@@ -311,7 +313,7 @@ void loop()
     mySerial.write('j');
   }
 
-  if(Firebase.getString("control_window")=="\"1\"")
+  if(Firebase.getString("control_window")=="1")
   {
     mySerial.write('K');
   }
