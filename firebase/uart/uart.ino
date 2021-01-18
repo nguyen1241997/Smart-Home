@@ -2,22 +2,54 @@
 #include <FirebaseArduino.h>
 #include <ESP8266WiFi.h>
 #include <SoftwareSerial.h>
- 
-SoftwareSerial mySerial(4,5); // RX, TX
+#include <SPI.h>
+#include <MFRC522.h>
 
-const String wifiName = "CanHo Truong Thinh 2";
+#define SS_PIN 4  //D2
+#define RST_PIN 5 //D1
+
+/*
+SDA - D2
+SCK - D5
+MOSI - D7
+MISO - D6
+RST - D1
+D0-D4
+3.3 - 3.3V
+GND - GND
+ */
+
+//MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance/object.
+
+int variable = 0;
+
+
+unsigned long uidDec, uidDecTemp; // hien thi so UID dang thap phan
+byte bCounter, readBit;
+unsigned long ticketNumber;
+ 
+SoftwareSerial mySerial(2,16); // RX, TX, D0-PA3, D4
+//SoftwareSerial mySerial(4,5);//D1-pa3, d2-pa2
+
+const String wifiName = "Can Ho Truong Thinh 2";
 const String password = "truongthinh25";
 //const String wifiName = "nguyen124";
 //const String password = "12345678";
 
 int temp,humi,gas;
 char bf[20];
+String bf2[15];
 int l=0;
 int i=0;
 char x=50;
 
+String content= "";
+
 void setup()
 {
+  //SPI.begin();
+  //mfrc522.PCD_Init();
+  
   mySerial.begin(9600);
   Serial.begin(9600);
   Serial.print("Connecting");
@@ -31,6 +63,11 @@ void setup()
   Serial.println("Connected");
 
   Firebase.begin("smart-home-a4a54.firebaseio.com","M5Jax2jJQnVnnWPeJegIrJtWhMbZwtI0wts0ihKy");
+
+  for(i=0;i<15;i++)
+  {
+    bf2[i]="0";
+  }
 }
 
 void loop()
@@ -212,7 +249,29 @@ void loop()
       {
         Firebase.setInt("state_window",0);
       }
+
+      if (bf[11]=='X')
+      {
+        Firebase.setInt("state_gas",1);
+      }
+      else if (bf[11]=='x')
+      {
+        Firebase.setInt("state_gas",0);
+      }
+
+      if (bf[12]=='Y')
+      {
+        Firebase.setInt("state_fire",1);
+      }
+      else if (bf[12]=='y')
+      {
+        Firebase.setInt("state_fire",0);
+      }
+
+      Serial.println("xxxxxxx");
+      
     }
+    Serial.println("yyyyyyy");
   }
 
   //send data to firebase
@@ -221,107 +280,131 @@ void loop()
   Firebase.setInt("gas_sensor",gas);
 
   //get data from firebase
-  
-  if(Firebase.getString("control_led_LVR")=="1")
-  {
-    mySerial.write('A');
-  }
-  else
-  {
-    mySerial.write('a');
-  }
 
-  if(Firebase.getString("control_led_KCR")=="1")
-  {
-    mySerial.write('B');
-  }
-  else
-  {
-    mySerial.write('b');
-  }
-  
-
-  if(Firebase.getString("control_led_BedR")=="1")
-  {
-    mySerial.write('C');
-  }
-  else
-  {
-    mySerial.write('c');
-  }
-
-  if(Firebase.getString("control_led_BaR")=="1")
-  {
-    mySerial.write('D');
-  }
-  else
-  {
-    mySerial.write('d');
-  }
-  
-  if(Firebase.getString("control_led_garage")=="1")
-  {
-    mySerial.write('E');
-  }
-  else
-  {
-    mySerial.write('e');
-  }
-
-  if(Firebase.getString("control_fan_LVR")=="1")
-  {
-    mySerial.write('F');
-  }
-  else
-  {
-    mySerial.write('f');
-  }
-
-  if(Firebase.getString("control_fan_KCR")=="1")
-  {
-    mySerial.write('G');
-  }
-  else
-  {
-    mySerial.write('g');
-  }
-
-  if(Firebase.getString("control_fan_BedR")=="1")
-  {
-    mySerial.write('H');
-  }
-  else
-  {
-    mySerial.write('h');
-  }
-
-  if(Firebase.getString("control_door_garage")=="1")
-  {
-    mySerial.write('I');
-  }
-  else
-  {
-    mySerial.write('i');
-  }
-
-  if(Firebase.getString("control_clothes")=="1")
-  {
-    mySerial.write('J');
-  }
-  else
-  {
-    mySerial.write('j');
-  }
-
-  if(Firebase.getString("control_window")=="1")
-  {
-    mySerial.write('K');
-  }
-  else
-  {
-    mySerial.write('k');
-  }
-  
   Serial.println("bbbbbbbbbbbbbbbb");
-  delay(1000);
+
+  if(Firebase.getString("control_led_LVR")!= bf2[0])
+  {
+    bf2[0]=Firebase.getString("control_led_LVR");
+    if(bf2[0]=="1") mySerial.write('A');
+    else mySerial.write('a');
+  }
+
+  if(Firebase.getString("control_led_KCR")!=bf2[1])
+  {
+    bf2[1]=Firebase.getString("control_led_KCR");
+    if(bf2[1]=="1") mySerial.write('B');
+    else mySerial.write('b');
+  }  
+
+  if(Firebase.getString("control_led_BedR")!=bf2[2])
+  {
+    bf2[2]=Firebase.getString("control_led_BedR");
+    if(bf2[2]=="1") mySerial.write('C');
+    else mySerial.write('c');
+  }
+
+  if(Firebase.getString("control_led_BaR")!=bf2[3])
+  {
+    bf2[3]=Firebase.getString("control_led_BaR");
+    if(bf2[3]=="1") mySerial.write('D');
+    else mySerial.write('d');
+  }
+
+  if(Firebase.getString("control_led_garage")!=bf2[4])
+  {
+    bf2[4]=Firebase.getString("control_led_garage");
+    if(bf2[4]=="1") mySerial.write('E');
+    else mySerial.write('e');
+  }
+
+  if(Firebase.getString("control_fan_LVR")!=bf2[5])
+  {
+    bf2[5]=Firebase.getString("control_fan_LVR");
+    if(bf2[5]=="1") mySerial.write('F');
+    else mySerial.write('f');
+  }
+
+  if(Firebase.getString("control_fan_KCR")!=bf2[6])
+  {
+    bf2[6]=Firebase.getString("control_fan_KCR");
+    if(bf2[6]=="1") mySerial.write('G');
+    else mySerial.write('g');
+  }
+
+  if(Firebase.getString("control_fan_BedR")!=bf2[7])
+  {
+    bf2[7]=Firebase.getString("control_fan_BedR");
+    if(bf2[7]=="1") mySerial.write('H');
+    else mySerial.write('h');
+  }
+
+  if(Firebase.getString("control_door_garage")!=bf2[8])
+  {
+    bf2[8]=Firebase.getString("control_door_garage");
+    if(bf2[8]=="1") mySerial.write('I');
+    else mySerial.write('i');
+  }
+
+  if(Firebase.getString("control_clothes")!=bf2[9])
+  {
+    bf2[9]=Firebase.getString("control_clothes");
+    if(bf2[9]=="1") mySerial.write('J');
+    else mySerial.write('j');
+  }
+
+  if(Firebase.getString("control_window")!=bf2[10])
+  {
+    Serial.println("fffffffffffffff");
+    bf2[10]=Firebase.getString("control_window");
+    if(bf2[10]=="1") mySerial.write('K');
+    else mySerial.write('k');
+  }
+  
+  Serial.println("cccccccccccccccccccccc");
+
+/*
+  if ( ! mfrc522.PICC_IsNewCardPresent()) 
+  {
+    return;
+  }
+  // Select one of the cards
+  if ( ! mfrc522.PICC_ReadCardSerial()) 
+  {
+    return;
+  }
+  
+  //Show UID on serial monitor
+  Serial.println();
+  //Serial.print(" UID tag :");
+  content= "";
+  //byte letter;
+  
+  for (byte i = 0; i < mfrc522.uid.size; i++) 
+  {
+     Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
+     Serial.print(mfrc522.uid.uidByte[i], HEX);
+     content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " "));
+     content.concat(String(mfrc522.uid.uidByte[i], HEX));
+  }
+  content.toUpperCase();
+
+  Serial.println();
+  
+  if (content.substring(1) == "F9 1F A5 96") //change UID of the card that you want to give access
+  {
+    Serial.println(" Authorized Access ");
+    //Serial.println(" Welcome to my channel Mostly Programing ");
+    //Serial.println(" Learn Programming and Coding Skills ");
+    //delay(1000);
+    mySerial.write('L');
+  }
+  else
+  {
+    Serial.println(" Access Denied ");
+    //delay(3000);
+    mySerial.write('l');
+  }
+  */
+  delay(1);
 }

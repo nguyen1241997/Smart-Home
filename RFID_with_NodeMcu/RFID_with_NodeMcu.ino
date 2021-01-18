@@ -4,9 +4,21 @@
 #include <SPI.h>
 #include <MFRC522.h>
 
+/*
+SDA - D2
+SCK - D5
+MOSI - D7
+MISO - D6
+RST - D1
+D0-D4
+3.3 - 3.3V
+GND - GND
+ */
+
 MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance/object.
 
 int variable = 0;
+
 
 unsigned long uidDec, uidDecTemp; // hien thi so UID dang thap phan
 byte bCounter, readBit;
@@ -20,8 +32,7 @@ void setup()
   Serial.println("Show your card:");
 }
 void loop() 
-{
-  
+{  
   // Look for new cards
   if ( ! mfrc522.PICC_IsNewCardPresent()) 
   {
@@ -32,14 +43,13 @@ void loop()
   {
     return;
   }
-
-  
   
   //Show UID on serial monitor
   Serial.println();
   Serial.print(" UID tag :");
   String content= "";
   byte letter;
+  
   for (byte i = 0; i < mfrc522.uid.size; i++) 
   {
      Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
@@ -48,6 +58,7 @@ void loop()
      content.concat(String(mfrc522.uid.uidByte[i], HEX));
   }
   content.toUpperCase();
+
   Serial.println();
   
   if (content.substring(1) == "F9 1F A5 96") //change UID of the card that you want to give access

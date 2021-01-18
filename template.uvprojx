@@ -338,7 +338,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F40_41xxx,USE_STDPERIPH_DRIVER,HSE_VALUE=8000000</Define>
               <Undefine></Undefine>
-              <IncludePath>.\scr;..\..\stm32\STM32F4xx_DSP_StdPeriph_Lib_V1.8.0\Libraries\CMSIS\Include;..\..\stm32\STM32F4xx_DSP_StdPeriph_Lib_V1.8.0\Libraries\CMSIS\Device\ST\STM32F4xx\Include;..\..\stm32\STM32F4xx_DSP_StdPeriph_Lib_V1.8.0\Libraries\STM32F4xx_StdPeriph_Driver\inc</IncludePath>
+              <IncludePath>.\scr;..\..\stm32\STM32F4xx_DSP_StdPeriph_Lib_V1.8.0\Libraries\CMSIS\Include;..\..\stm32\STM32F4xx_DSP_StdPeriph_Lib_V1.8.0\Libraries\CMSIS\Device\ST\STM32F4xx\Include;..\..\stm32\STM32F4xx_DSP_StdPeriph_Lib_V1.8.0\Libraries\STM32F4xx_StdPeriph_Driver\inc;.\scr</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -406,6 +406,16 @@
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\scr\main.c</FilePath>
+            </File>
+            <File>
+              <FileName>lcd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\scr\lcd.c</FilePath>
+            </File>
+            <File>
+              <FileName>lcd.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\scr\lcd.h</FilePath>
             </File>
           </Files>
         </Group>

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "stm32f4xx_tim.h"
 #include "stm32f4xx_exti.h"
+#include "lcd.h"
 
 #define led_LVR_pin			GPIO_Pin_0
 #define led_KCR_pin			GPIO_Pin_1
@@ -16,11 +17,23 @@
 -PA6: DHT11
 -PA0: gas sensor
 -PA1: water sensor
--PC6-PC7: servo: 20~140
--PC6: window
--PC7: garage door
 -PA2-PA3: TX-RX
+-PA7: LCD contrast
+
 -PB0-PB7: gpio
+-PB8-9: led-gate
+-PB10: buzz
+
+-PC6-PC8: servo: 20~140
+-PC8: window
+-PC7: garage door
+-PC6: clothes
+-PC9: gate
+-PC0-PC3: KEYPAD IN
+
+-PD0-PD3: KEYPAD OUT
+
+-PE0-PE5: LCD
 */
 
 void exti0_init(void);
@@ -47,19 +60,45 @@ void uart2_init(void);
 void usart_send_char(char data);
 void usart_send_string(char *s);
 
+void uart_to_esp(void);
+
+int8_t read_keypad (void);
+void check_key(int8_t key_var);
+
+void gpio_init2(void);
+
 uint8_t c, I_RH=0, D_RH, I_Temp=0, D_Temp, CheckSum;
 
-volatile uint16_t adc_value[2];
+volatile uint16_t adc_value[4];
 
 volatile char data_receive;
 char buffer[20];
 
 char state_led_LVR=0, state_led_KCR=0, state_led_BedR=0, state_led_BaR=0, state_led_Garage=0;
 char state_fan_LVR=0, state_fan_KCR=0, state_fan_BedR=0;
-char state_door_garage=0, state_clothes=0, state_window=0;
+char state_door_garage=0, state_clothes=0, state_window=0, state_gate=0, state_gas=0, state_fire=0;
+
+
+int weight=50;
+float height=1.76;
+char bufferr[12];
+
+int8_t password[5]={"23568"};
+int8_t check=0;
+int8_t key_enter[5];
+int8_t key;
 
 int main(void)
 {
+	gpio_init();
+	gpio_init2();
+	
+	lcd_init();
+	lcd_write(0,0,(int8_t *)"AAAAAA");
+	lcd_write(1,4,(int8_t *)"NVN");
+	
+	led_init();
+	timer7_interrput();
 	
 	gpio_init();
 	GPIO_SetBits(GPIOB, fan_LVR_pin);
@@ -73,143 +112,57 @@ int main(void)
 	led_init();
 	timer7_interrput();
 	
+	TIM_SetCompare4(TIM3,80);//close door
+	TIM_SetCompare1(TIM14,440);//lcd
 	
 	while(1)
 	{
 		
-		//sprintf(buffer,"!%d@",adc_value[0]);
-		usart_send_string(buffer);
-		
-		if (adc_value[0]>2500)
-		{
-			//TIM_SetCompare1(TIM3,140);
-		}
-		else
-		{
-			//TIM_SetCompare1(TIM3,80);
-		}
-		
-		//readDHT11();
-		
-		sprintf(buffer,"#%d$",I_Temp);
-		usart_send_string(buffer);
-		sprintf(buffer,"^%d*",I_RH);
-		usart_send_string(buffer);
-		
-		
-		buffer[0]='(';
-		state_led_LVR = GPIO_ReadOutputDataBit(GPIOB, led_LVR_pin);
-		if(state_led_LVR)
-		{
-			buffer[1]='M';
-		}
-		else
-		{
-			buffer[1]='m';
-		}
-		
-		state_led_KCR = GPIO_ReadOutputDataBit(GPIOB, led_KCR_pin);
-		if(state_led_KCR)
-		{
-			buffer[2]='N';
-		}
-		else
-		{
-			buffer[2]='n';
-		}
-		
-		state_led_BedR = GPIO_ReadOutputDataBit(GPIOB, led_BedR_pin);
-		if(state_led_BedR)
-		{
-			buffer[3]='O';
-		}
-		else
-		{
-			buffer[3]='o';
-		}
-		
-		state_led_BaR = GPIO_ReadOutputDataBit(GPIOB, led_BaR_pin);
-		if(state_led_BaR)
-		{
-			buffer[4]='P';
-		}
-		else
-		{
-			buffer[4]='p';
-		}
-		
-		state_led_Garage = GPIO_ReadOutputDataBit(GPIOB, led_Garage_pin);
-		if(state_led_Garage)
-		{
-			buffer[5]='Q';
-		}
-		else
-		{
-			buffer[5]='q';
-		}
-		
-		state_fan_LVR = GPIO_ReadOutputDataBit(GPIOB, fan_LVR_pin);
-		if(state_fan_LVR==0)
-		{
-			buffer[6]='R';
-		}
-		else
-		{
-			buffer[6]='r';
-		}
-		
-		state_fan_KCR = GPIO_ReadOutputDataBit(GPIOB, fan_KCR_pin);
-		if(state_fan_KCR==0)
-		{
-			buffer[7]='S';
-		}
-		else
-		{
-			buffer[7]='s';
-		}
-		
-		state_fan_BedR = GPIO_ReadOutputDataBit(GPIOB, fan_BedR_pin);
-		if(state_fan_BedR==0)
-		{
-			buffer[8]='T';
-		}
-		else
-		{
-			buffer[8]='t';
-		}
 
-		if(state_door_garage)
+		//gas
+		if ((adc_value[0]<2500) && (state_window==0)) //close window
 		{
-			buffer[9]='U';
+			TIM_SetCompare1(TIM3,80);
 		}
 		else
 		{
-			buffer[9]='u';
-		}
-
-		if(state_clothes)
-		{
-			buffer[10]='V';
-		}
-		else
-		{
-			buffer[10]='v';
-		}
-
-		if(state_window)
-		{
-			buffer[11]='W';
-		}
-		else
-		{
-			buffer[11]='w';
+			state_window=1;
+			TIM_SetCompare1(TIM3,135);
 		}
 		
-		buffer[12]=')';
-		usart_send_string(buffer);
+		//water
+		if ((adc_value[1]>2500) && (state_clothes==1)) //open clothes
+		{
+			TIM_SetCompare3(TIM3,135);
+		}
+		else
+		{
+			state_clothes=0;
+			TIM_SetCompare3(TIM3,80);
+		}
 		
-		delay_10_us(900000); //2s=200000
-		//delay_10_us(100000); 
+		//fire
+		if (adc_value[2]>2500)
+		{
+			state_fire=1;
+			GPIO_SetBits(GPIOB, GPIO_Pin_10);
+		}
+		else
+		{
+			state_fire=0;
+			GPIO_ResetBits(GPIOB, GPIO_Pin_10);
+		}
+		
+		readDHT11();
+		
+		uart_to_esp();
+		
+		/*
+		key = read_keypad();
+		//key=55;
+		check_key(key);
+		*/
+		delay_10_us(2000000);
 		
 	}
 }
@@ -332,7 +285,7 @@ void adc_dma_init(void)
 	myDMA.DMA_Channel = DMA_Channel_0;
 	myDMA.DMA_PeripheralBaseAddr = (uint32_t) &ADC1->DR;
 	myDMA.DMA_Memory0BaseAddr = (uint32_t) &adc_value;
-	myDMA.DMA_BufferSize = 2;
+	myDMA.DMA_BufferSize = 3;
 	myDMA.DMA_DIR = DMA_DIR_PeripheralToMemory;
 	myDMA.DMA_Mode = DMA_Mode_Circular;
 	myDMA.DMA_FIFOMode = DMA_FIFOMode_Disable;
@@ -348,7 +301,7 @@ void adc_dma_init(void)
 	DMA_Init(DMA2_Stream0,&myDMA);
 	DMA_Cmd(DMA2_Stream0, ENABLE);
 	
-	myLED.GPIO_Pin = GPIO_Pin_1 | GPIO_Pin_0;
+	myLED.GPIO_Pin = GPIO_Pin_1 | GPIO_Pin_0 | GPIO_Pin_4;
 	myLED.GPIO_Mode = GPIO_Mode_AIN;
 	myLED.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_Init(GPIOA,&myLED);
@@ -363,12 +316,13 @@ void adc_dma_init(void)
 	myADC.ADC_ContinuousConvMode = ENABLE;
 	myADC.ADC_DataAlign = ADC_DataAlign_Right;
 	myADC.ADC_Resolution = ADC_Resolution_12b;
-	myADC.ADC_NbrOfConversion = 2;
+	myADC.ADC_NbrOfConversion = 3;
 	myADC.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
 	ADC_Init(ADC1,&myADC);
 	
 	ADC_RegularChannelConfig (ADC1,ADC_Channel_0,1,ADC_SampleTime_480Cycles);
 	ADC_RegularChannelConfig (ADC1,ADC_Channel_1,2,ADC_SampleTime_480Cycles);
+	ADC_RegularChannelConfig (ADC1,ADC_Channel_4,3,ADC_SampleTime_480Cycles);
 	
 	ADC_DMARequestAfterLastTransferCmd(ADC1,ENABLE);
 	
@@ -382,14 +336,24 @@ void timer3_pwm_sg90(void)
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3,ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC,ENABLE);
 
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM14,ENABLE); //PA7
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA,ENABLE);
 	
 	GPIO_InitTypeDef myGPIO;
 	myGPIO.GPIO_Mode = GPIO_Mode_AF;
 	myGPIO.GPIO_OType = GPIO_OType_PP;
 	myGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	myGPIO.GPIO_Speed = GPIO_Low_Speed;
-	myGPIO.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
+	myGPIO.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9;
 	GPIO_Init(GPIOC,&myGPIO);
+	
+	GPIO_InitTypeDef myGPIO2;
+	myGPIO2.GPIO_Mode = GPIO_Mode_AF;
+	myGPIO2.GPIO_OType = GPIO_OType_PP;
+	myGPIO2.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	myGPIO2.GPIO_Speed = GPIO_Low_Speed;
+	myGPIO2.GPIO_Pin = GPIO_Pin_7;
+	GPIO_Init(GPIOA,&myGPIO2);
 	
 	TIM_TimeBaseInitTypeDef myTimer;
 	myTimer.TIM_Prescaler = 1680-1;
@@ -398,6 +362,8 @@ void timer3_pwm_sg90(void)
 	myTimer.TIM_CounterMode = TIM_CounterMode_Up;
 	TIM_TimeBaseInit(TIM3,&myTimer);
 	TIM_Cmd(TIM3,ENABLE);
+	TIM_TimeBaseInit(TIM14,&myTimer);
+	TIM_Cmd(TIM14,ENABLE);
 	
 	TIM_OCInitTypeDef myPWM;
 	myPWM.TIM_OCMode = TIM_OCMode_PWM1;
@@ -406,12 +372,21 @@ void timer3_pwm_sg90(void)
 	myPWM.TIM_OutputState = TIM_OutputState_Enable;
 	TIM_OC1Init(TIM3,&myPWM);
 	TIM_OC2Init(TIM3,&myPWM);
+	TIM_OC3Init(TIM3,&myPWM);
+	TIM_OC4Init(TIM3,&myPWM);
+	TIM_OC1Init(TIM14,&myPWM);
 	
 	TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
 	TIM_OC2PreloadConfig(TIM3, TIM_OCPreload_Enable);
+	TIM_OC3PreloadConfig(TIM3, TIM_OCPreload_Enable);
+	TIM_OC4PreloadConfig(TIM3, TIM_OCPreload_Enable);
+	TIM_OC1PreloadConfig(TIM14, TIM_OCPreload_Enable);
 	
 	GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_TIM3);
 	GPIO_PinAFConfig(GPIOC, GPIO_PinSource7, GPIO_AF_TIM3);
+	GPIO_PinAFConfig(GPIOC, GPIO_PinSource8, GPIO_AF_TIM3);
+	GPIO_PinAFConfig(GPIOC, GPIO_PinSource9, GPIO_AF_TIM3);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource7, GPIO_AF_TIM14);
 }
 
 void timer7_interrput(void)
@@ -437,6 +412,7 @@ void timer7_interrput(void)
 }
 void gpio_init(void)
 {
+
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB,ENABLE);
 	
 	GPIO_InitTypeDef myGPIO;
@@ -444,8 +420,18 @@ void gpio_init(void)
 	myGPIO.GPIO_OType = GPIO_OType_PP;
 	myGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	myGPIO.GPIO_Speed = GPIO_High_Speed;
-	myGPIO.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7;
+	myGPIO.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10;
 	GPIO_Init(GPIOB,&myGPIO);
+	
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE,ENABLE);
+	
+	GPIO_InitTypeDef myGPIOo;
+	myGPIOo.GPIO_Mode = GPIO_Mode_OUT;
+	myGPIOo.GPIO_OType = GPIO_OType_PP;
+	myGPIOo.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	myGPIOo.GPIO_Speed = GPIO_High_Speed;
+	myGPIOo.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5;
+	GPIO_Init(GPIOE,&myGPIOo);
 }
 void uart2_init(void)
 {
@@ -498,7 +484,337 @@ void usart_send_string(char *s)
 		s++;
 	}
 }
+void uart_to_esp(void)
+{
 
+	
+	//readDHT11();
+	sprintf(buffer,"#%d$",I_Temp);
+	usart_send_string(buffer);
+	sprintf(buffer,"^%d*",I_RH);
+	usart_send_string(buffer);
+	
+	//gas
+	if (adc_value[0]<100)
+		sprintf(buffer,"!00%d@",adc_value[0]);
+	else if (adc_value[0]<1000)
+		sprintf(buffer,"!0%d@",adc_value[0]);
+	else
+		sprintf(buffer,"!%d@",adc_value[0]);
+	
+	usart_send_string(buffer);
+	
+	buffer[0]='(';
+	state_led_LVR = GPIO_ReadOutputDataBit(GPIOB, led_LVR_pin);
+	if(state_led_LVR)
+	{
+		buffer[1]='M';
+	}
+	else
+	{
+		buffer[1]='m';
+	}
+	
+	state_led_KCR = GPIO_ReadOutputDataBit(GPIOB, led_KCR_pin);
+	if(state_led_KCR)
+	{
+		buffer[2]='N';
+	}
+	else
+	{
+		buffer[2]='n';
+	}
+	
+	state_led_BedR = GPIO_ReadOutputDataBit(GPIOB, led_BedR_pin);
+	if(state_led_BedR)
+	{
+		buffer[3]='O';
+	}
+	else
+	{
+		buffer[3]='o';
+	}
+	
+	state_led_BaR = GPIO_ReadOutputDataBit(GPIOB, led_BaR_pin);
+	if(state_led_BaR)
+	{
+		buffer[4]='P';
+	}
+	else
+	{
+		buffer[4]='p';
+	}
+	
+	state_led_Garage = GPIO_ReadOutputDataBit(GPIOB, led_Garage_pin);
+	if(state_led_Garage)
+	{
+		buffer[5]='Q';
+	}
+	else
+	{
+		buffer[5]='q';
+	}
+	
+	state_fan_LVR = GPIO_ReadOutputDataBit(GPIOB, fan_LVR_pin);
+	if(state_fan_LVR==0)
+	{
+		buffer[6]='R';
+	}
+	else
+	{
+		buffer[6]='r';
+	}
+	
+	state_fan_KCR = GPIO_ReadOutputDataBit(GPIOB, fan_KCR_pin);
+	if(state_fan_KCR==0)
+	{
+		buffer[7]='S';
+	}
+	else
+	{
+		buffer[7]='s';
+	}
+	
+	state_fan_BedR = GPIO_ReadOutputDataBit(GPIOB, fan_BedR_pin);
+	if(state_fan_BedR==0)
+	{
+		buffer[8]='T';
+	}
+	else
+	{
+		buffer[8]='t';
+	}
+
+	if(state_door_garage)
+	{
+		buffer[9]='U';
+	}
+	else
+	{
+		buffer[9]='u';
+	}
+
+	if(state_clothes)
+	{
+		buffer[10]='V';
+	}
+	else
+	{
+		buffer[10]='v';
+	}
+
+	if(state_window)
+	{
+		buffer[11]='W';
+	}
+	else
+	{
+		buffer[11]='w';
+	}
+	
+	if(state_gas)
+	{
+		buffer[12]='X';
+	}
+	else
+	{
+		buffer[12]='x';
+	}
+	
+	if(state_fire)
+	{
+		buffer[13]='Y';
+	}
+	else
+	{
+		buffer[13]='y';
+	}
+	
+	buffer[14]=')';
+	usart_send_string(buffer);
+}
+void gpio_init2(void)
+{
+	//init gpio
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE,ENABLE);
+	
+	GPIO_InitTypeDef myLED;
+	myLED.GPIO_Mode = GPIO_Mode_OUT;
+	myLED.GPIO_OType = GPIO_OType_PP;
+	myLED.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	myLED.GPIO_Speed = GPIO_Low_Speed;
+	myLED.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5;
+	GPIO_Init(GPIOE,&myLED);
+	
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD,ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA,ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC,ENABLE);
+	
+	GPIO_InitTypeDef myLED1;
+	myLED1.GPIO_Mode = GPIO_Mode_OUT;
+	myLED1.GPIO_OType = GPIO_OType_PP;
+	myLED1.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	myLED1.GPIO_Speed = GPIO_Low_Speed;
+	myLED1.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
+	GPIO_Init(GPIOD,&myLED1);
+	
+	GPIO_InitTypeDef myLED2;
+	myLED2.GPIO_Mode = GPIO_Mode_IN;
+	myLED2.GPIO_OType = GPIO_OType_PP;
+	myLED2.GPIO_PuPd = GPIO_PuPd_UP;
+	myLED2.GPIO_Speed = GPIO_Low_Speed;
+	myLED2.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
+	GPIO_Init(GPIOC,&myLED2);
+	
+	GPIO_InitTypeDef myLED3;
+	myLED3.GPIO_Mode = GPIO_Mode_OUT;
+	myLED3.GPIO_OType = GPIO_OType_PP;
+	myLED3.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	myLED3.GPIO_Speed = GPIO_Low_Speed;
+	myLED3.GPIO_Pin = GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
+	GPIO_Init(GPIOD,&myLED3);
+	
+}
+int8_t read_keypad (void)
+{
+	
+	GPIO_ResetBits(GPIOD, GPIO_Pin_0);
+	GPIO_SetBits(GPIOD, GPIO_Pin_1);
+	GPIO_SetBits(GPIOD, GPIO_Pin_2);
+	GPIO_SetBits(GPIOD, GPIO_Pin_3);
+	//delay_10_us(100);
+	
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0));
+		return '1';
+	}
+	
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1));
+		return '2';	
+	}
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2));
+		return '3';	
+	}
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3));
+		return 'A';
+	}
+	
+	GPIO_ResetBits(GPIOD, GPIO_Pin_1);
+	GPIO_SetBits(GPIOD, GPIO_Pin_0);
+	GPIO_SetBits(GPIOD, GPIO_Pin_2);
+	GPIO_SetBits(GPIOD, GPIO_Pin_3);
+	//delay_10_us(100);
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0));
+		return '4';
+	}
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1));
+		return '5';
+	}
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2));
+		return '6';	
+	}
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3));
+		return 'B';
+	}
+	
+	GPIO_ResetBits(GPIOD, GPIO_Pin_2);
+	GPIO_SetBits(GPIOD, GPIO_Pin_1);
+	GPIO_SetBits(GPIOD, GPIO_Pin_0);
+	GPIO_SetBits(GPIOD, GPIO_Pin_3);
+	//delay_10_us(100);
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0));
+		return '7';
+	}
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1));
+		return '8';
+	}
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2));
+		return '9';
+	}
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3));
+		return 'C';
+	}
+	
+	GPIO_ResetBits(GPIOD, GPIO_Pin_3);
+	GPIO_SetBits(GPIOD, GPIO_Pin_1);
+	GPIO_SetBits(GPIOD, GPIO_Pin_2);
+	GPIO_SetBits(GPIOD, GPIO_Pin_0);
+	//delay_10_us(100);
+	
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0));
+		return '*';
+	}
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1));
+		return '0';
+	}
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2));
+		return '#';
+	}
+	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3))
+	{
+		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3));
+		return 'D';
+	}
+	
+	return 'X';
+}
+void check_key(int8_t key_var)
+{
+	if(key_var != 'X')
+	{
+		lcd_write_1(2,check,key_var);
+		key_enter[check] = key_var;
+		check++;
+		if(check == 5)
+		{
+			lcd_write(2,0,(int8_t *)"     ");
+			lcd_write(3,0,(int8_t *)"                  ");
+			for(int i=0;i<5;i++)
+			{
+				if(key_enter[i] != password[i])
+				{
+					lcd_write(3,0,(int8_t *)"Re-enter password");
+					check=0;
+					break;
+				}
+			}
+			if (check == 5)
+			{
+				lcd_write(3,0,(int8_t *)"Welcome!");
+			}
+			check=0;
+		}
+	}
+}
 //interrupt program
 void TIM7_IRQHandler(void) //2s
 {
@@ -506,6 +822,7 @@ void TIM7_IRQHandler(void) //2s
 	{
 		TIM_ClearITPendingBit(TIM7, TIM_IT_Update);
 		GPIO_ToggleBits(GPIOD, GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15);
+		//uart_to_esp();
 	}
 }
 void USART2_IRQHandler(void)
@@ -592,20 +909,45 @@ void USART2_IRQHandler(void)
 			
 			case 'J':
 				state_clothes=1;
+				TIM_SetCompare3(TIM3,135);
 				break;
 			
 			case 'j':
 				state_clothes=0;
+				TIM_SetCompare3(TIM3,80);
 				break;
 			
 			case 'K':
 				state_window=1;
-				TIM_SetCompare1(TIM3,140);
+				TIM_SetCompare1(TIM3,135);
 				break;
 			
 			case 'k':
 				state_window=0;
 				TIM_SetCompare1(TIM3,80);
+				break;
+			
+			case 'L':
+				state_gate=1;
+				for (int j=0;j<10;j++)
+				{
+					GPIO_ToggleBits(GPIOB, GPIO_Pin_8);
+					delay_10_us(20000);
+				}
+				TIM_SetCompare4(TIM3,135);
+			  //lcd_write(2,0,(int8_t *)"Accepted Access");
+				delay_10_us(400000);
+				TIM_SetCompare4(TIM3,80);
+				break;
+			
+			case 'l':
+				state_gate=0;
+				//lcd_write(2,0,(int8_t *)"Denied Access");
+				for (int j=0;j<10;j++)
+				{
+					GPIO_ToggleBits(GPIOB, GPIO_Pin_9);
+					delay_10_us(20000);
+				}
 				break;
 			
 			default:
