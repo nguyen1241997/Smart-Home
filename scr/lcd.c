@@ -118,12 +118,6 @@ void lcd_write(uint8_t x, uint8_t y,int8_t *data)
 		case 1:
 			lcd_send(0,0x80+0x40+y);
 			break;
-		case 2:
-			lcd_send(0,0x80+0x14+y);
-			break;
-		case 3:
-			lcd_send(0,0x80+0x54+y);
-			break;
 	}
 	
 	while (*data)
@@ -142,12 +136,6 @@ void lcd_write_1(uint8_t x, uint8_t y,int8_t data)
 			break;
 		case 1:
 			lcd_send(0,0x80+0x40+y);
-			break;
-		case 2:
-			lcd_send(0,0x80+0x14+y);
-			break;
-		case 3:
-			lcd_send(0,0x80+0x54+y);
 			break;
 	}
 	lcd_send(1,data);

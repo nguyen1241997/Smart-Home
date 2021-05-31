@@ -6,7 +6,7 @@
 #include <MFRC522.h>
 
 #define SS_PIN 4  //D2
-#define RST_PIN 5 //D1
+#define RST_PIN 5 //D1s
 
 /*
 SDA - D2
@@ -19,19 +19,12 @@ D0-D4
 GND - GND
  */
 
-//MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance/object.
-
-int variable = 0;
-
-
-unsigned long uidDec, uidDecTemp; // hien thi so UID dang thap phan
-byte bCounter, readBit;
-unsigned long ticketNumber;
+MFRC522 mfrc522(SS_PIN, RST_PIN);
+String content= "";
  
 SoftwareSerial mySerial(2,16); // RX, TX, D0-PA3, D4
-//SoftwareSerial mySerial(4,5);//D1-pa3, d2-pa2
 
-const String wifiName = "Can Ho Truong Thinh 2";
+const String wifiName = "CanHo Truong Thinh";
 const String password = "truongthinh25";
 //const String wifiName = "nguyen124";
 //const String password = "12345678";
@@ -39,16 +32,18 @@ const String password = "truongthinh25";
 int temp,humi,gas;
 char bf[20];
 String bf2[15];
-int l=0;
 int i=0;
-char x=50;
+String a;
 
-String content= "";
+
+void Send_Data_Firebase(void);
+void Get_data_Firebase(void);
+void RFID(void);
 
 void setup()
 {
-  //SPI.begin();
-  //mfrc522.PCD_Init();
+  SPI.begin();
+  mfrc522.PCD_Init();
   
   mySerial.begin(9600);
   Serial.begin(9600);
@@ -72,85 +67,146 @@ void setup()
 
 void loop()
 {
-  Serial.println("aaaaaaaaaaaaaaa");
+
+  //Receive_uart();
   
-  if (mySerial.available() > 0)
+  //send data to firebase
+  temp=32;
+  humi=67;
+  gas=1111;
+  Firebase.setInt("temparature",temp);
+  Firebase.setInt("humidity",humi);
+  Firebase.setInt("gas_sensor",gas);
+
+  Get_data_Firebase();
+  RFID();
+  
+  delay(10);
+}
+
+void RFID(void)
+{
+  Serial.println("---------------------");
+  if ( ! mfrc522.PICC_IsNewCardPresent()) 
   {
-    while (mySerial.available() > 0)
-    {
-      //delele buffer
-      for(i=0;i<20;i++)
-      {
-        bf[i]=0;
-      }
-      
-      char ch = mySerial.read();
-      Serial.println(ch);
+    return;
+  }
+  // Select one of the cards
+  if ( ! mfrc522.PICC_ReadCardSerial()) 
+  {
+    return;
+  }
+  content= "";
+  for (byte i = 0; i < mfrc522.uid.size; i++) 
+  {
+     Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
+     Serial.print(mfrc522.uid.uidByte[i], HEX);
+     content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " "));
+     content.concat(String(mfrc522.uid.uidByte[i], HEX));
+  }
+  content.toUpperCase();
+  Serial.println();
 
-      //temparature
-      if (ch=='#') 
-      {
-        i=0;
-        while(1)
-        {
-          ch = mySerial.read();
-          Serial.print(ch);
-          if (ch=='$') break;
-          bf[i]= ch-48;
-          i++;                  
-        }
-        temp = bf[0]*10 + bf[1];
-        Serial.println();
-      }
+  if (content.substring(1) == "F9 1F A5 96")
+  {
+    mySerial.write('L');
+    Serial.println("ok");
+  }
+  else
+  {
+    mySerial.write('l');
+    Serial.println("not");
+  }
+}
 
-      //humidity
-      if (ch=='^') 
-      {
-        i=0;
-        while(1)
-        {
-          ch = mySerial.read();
-          Serial.print(ch);
-          if (ch=='*') break;
-          bf[i]= ch-48;
-          i++;                  
-        }
-        humi = bf[0]*10 + bf[1];
-        Serial.println();
-      }
+void Get_data_Firebase(void)
+{
+  if(Firebase.getString("control_led_LVR")!= bf2[0])
+  {
+    bf2[0]=Firebase.getString("control_led_LVR");
+    if(bf2[0]=="1") mySerial.write('A');
+    else mySerial.write('a');
+  }
 
-      if (ch=='!') //gas sensor
-      {
-        i=0;
-        while(1)
-        {
-          ch = mySerial.read();
-          Serial.print(ch);
-          if (ch=='@') break;
-          bf[i]= ch-48;
-          i++;                  
-        }
-        gas = bf[0]*1000 + bf[1]*100 + bf[2]*10 + bf[3];
-        Serial.println();
-      }
+  if(Firebase.getString("control_led_KCR")!=bf2[1])
+  {
+    bf2[1]=Firebase.getString("control_led_KCR");
+    if(bf2[1]=="1") mySerial.write('B');
+    else mySerial.write('b');
+  }  
 
-      //gpio
-      if (ch=='(') 
-      {
-        i=0;
-        while(1)
-        {
-          ch = mySerial.read();
-          Serial.print(ch);
-          if (ch==')') break;
-          bf[i]= ch;
-          i++;                     
-        }
-        Serial.println();
-      }
+  if(Firebase.getString("control_led_BedR")!=bf2[2])
+  {
+    bf2[2]=Firebase.getString("control_led_BedR");
+    if(bf2[2]=="1") mySerial.write('C');
+    else mySerial.write('c');
+  }
 
-      
-      //send gpio state to firebase
+  if(Firebase.getString("control_led_BaR")!=bf2[3])
+  {
+    bf2[3]=Firebase.getString("control_led_BaR");
+    if(bf2[3]=="1") mySerial.write('D');
+    else mySerial.write('d');
+  }
+
+  if(Firebase.getString("control_led_garage")!=bf2[4])
+  {
+    bf2[4]=Firebase.getString("control_led_garage");
+    if(bf2[4]=="1") mySerial.write('E');
+    else mySerial.write('e');
+  }
+
+  if(Firebase.getString("control_fan_LVR")!=bf2[5])
+  {
+    bf2[5]=Firebase.getString("control_fan_LVR");
+    if(bf2[5]=="1") mySerial.write('F');
+    else mySerial.write('f');
+  }
+
+  if(Firebase.getString("control_fan_KCR")!=bf2[6])
+  {
+    bf2[6]=Firebase.getString("control_fan_KCR");
+    if(bf2[6]=="1") mySerial.write('G');
+    else mySerial.write('g');
+  }
+
+  if(Firebase.getString("control_fan_BedR")!=bf2[7])
+  {
+    bf2[7]=Firebase.getString("control_fan_BedR");
+    if(bf2[7]=="1") mySerial.write('H');
+    else mySerial.write('h');
+  }
+
+  if(Firebase.getString("control_door_garage")!=bf2[8])
+  {
+    bf2[8]=Firebase.getString("control_door_garage");
+    if(bf2[8]=="1") mySerial.write('I');
+    else mySerial.write('i');
+  }
+
+  if(Firebase.getString("control_clothes")!=bf2[9])
+  {
+    bf2[9]=Firebase.getString("control_clothes");
+    if(bf2[9]=="1") mySerial.write('J');
+    else mySerial.write('j');
+  }
+
+  if(Firebase.getString("control_window")!=bf2[10])
+  {
+    bf2[10]=Firebase.getString("control_window");
+    if(bf2[10]=="1") mySerial.write('K');
+    else mySerial.write('k');
+  }
+
+  if(Firebase.getString("control_warning")!=bf2[11])
+  {
+    bf2[10]=Firebase.getString("control_warning");
+    if(bf2[10]=="0") mySerial.write('0');
+  }
+}
+
+void Send_Data_Firebase(void)
+{
       if (bf[0]=='M')
       {
         Firebase.setInt("state_led_LVR",1);
@@ -267,144 +323,89 @@ void loop()
       {
         Firebase.setInt("state_fire",0);
       }
+}
 
-      Serial.println("xxxxxxx");
+void Receive_uart(void)
+{
+  if (mySerial.available() > 0)
+  {
+    while (mySerial.available() > 0)
+    {
+      //delele buffer
+      for(i=0;i<20;i++)
+      {
+        bf[i]=0;
+      }
       
+      char ch = mySerial.read();
+      Serial.println(ch);
+
+      //temparature
+      if (ch=='#') 
+      {
+        i=0;
+        while(1)
+        {
+          ch = mySerial.read();
+          Serial.print(ch);
+          if (ch=='$') break;
+          bf[i]= ch-48;
+          i++;                  
+        }
+        temp = bf[0]*10 + bf[1];
+        Serial.println();
+      }
+
+      //humidity
+      if (ch=='^') 
+      {
+        i=0;
+        while(1)
+        {
+          ch = mySerial.read();
+          Serial.print(ch);
+          if (ch=='*') break;
+          bf[i]= ch-48;
+          i++;                  
+        }
+        humi = bf[0]*10 + bf[1];
+        Serial.println();
+      }
+
+      if (ch=='!') //gas sensor
+      {
+        i=0;
+        while(1)
+        {
+          ch = mySerial.read();
+          Serial.print(ch);
+          if (ch=='@') break;
+          bf[i]= ch-48;
+          i++;                  
+        }
+        gas = bf[0]*1000 + bf[1]*100 + bf[2]*10 + bf[3];
+        Serial.println();
+      }
+
+      //gpio
+      if (ch=='(') 
+      {
+        i=0;
+        while(1)
+        {
+          ch = mySerial.read();
+          Serial.print(ch);
+          if (ch==')') break;
+          bf[i]= ch;
+          i++;                     
+        }
+        Serial.println();
+      }
+
+      
+      //send gpio state to firebase
+      Send_Data_Firebase();
+
     }
-    Serial.println("yyyyyyy");
   }
-
-  //send data to firebase
-  Firebase.setInt("temparature",temp);
-  Firebase.setInt("humidity",humi);
-  Firebase.setInt("gas_sensor",gas);
-
-  //get data from firebase
-
-  Serial.println("bbbbbbbbbbbbbbbb");
-
-  if(Firebase.getString("control_led_LVR")!= bf2[0])
-  {
-    bf2[0]=Firebase.getString("control_led_LVR");
-    if(bf2[0]=="1") mySerial.write('A');
-    else mySerial.write('a');
-  }
-
-  if(Firebase.getString("control_led_KCR")!=bf2[1])
-  {
-    bf2[1]=Firebase.getString("control_led_KCR");
-    if(bf2[1]=="1") mySerial.write('B');
-    else mySerial.write('b');
-  }  
-
-  if(Firebase.getString("control_led_BedR")!=bf2[2])
-  {
-    bf2[2]=Firebase.getString("control_led_BedR");
-    if(bf2[2]=="1") mySerial.write('C');
-    else mySerial.write('c');
-  }
-
-  if(Firebase.getString("control_led_BaR")!=bf2[3])
-  {
-    bf2[3]=Firebase.getString("control_led_BaR");
-    if(bf2[3]=="1") mySerial.write('D');
-    else mySerial.write('d');
-  }
-
-  if(Firebase.getString("control_led_garage")!=bf2[4])
-  {
-    bf2[4]=Firebase.getString("control_led_garage");
-    if(bf2[4]=="1") mySerial.write('E');
-    else mySerial.write('e');
-  }
-
-  if(Firebase.getString("control_fan_LVR")!=bf2[5])
-  {
-    bf2[5]=Firebase.getString("control_fan_LVR");
-    if(bf2[5]=="1") mySerial.write('F');
-    else mySerial.write('f');
-  }
-
-  if(Firebase.getString("control_fan_KCR")!=bf2[6])
-  {
-    bf2[6]=Firebase.getString("control_fan_KCR");
-    if(bf2[6]=="1") mySerial.write('G');
-    else mySerial.write('g');
-  }
-
-  if(Firebase.getString("control_fan_BedR")!=bf2[7])
-  {
-    bf2[7]=Firebase.getString("control_fan_BedR");
-    if(bf2[7]=="1") mySerial.write('H');
-    else mySerial.write('h');
-  }
-
-  if(Firebase.getString("control_door_garage")!=bf2[8])
-  {
-    bf2[8]=Firebase.getString("control_door_garage");
-    if(bf2[8]=="1") mySerial.write('I');
-    else mySerial.write('i');
-  }
-
-  if(Firebase.getString("control_clothes")!=bf2[9])
-  {
-    bf2[9]=Firebase.getString("control_clothes");
-    if(bf2[9]=="1") mySerial.write('J');
-    else mySerial.write('j');
-  }
-
-  if(Firebase.getString("control_window")!=bf2[10])
-  {
-    Serial.println("fffffffffffffff");
-    bf2[10]=Firebase.getString("control_window");
-    if(bf2[10]=="1") mySerial.write('K');
-    else mySerial.write('k');
-  }
-  
-  Serial.println("cccccccccccccccccccccc");
-
-/*
-  if ( ! mfrc522.PICC_IsNewCardPresent()) 
-  {
-    return;
-  }
-  // Select one of the cards
-  if ( ! mfrc522.PICC_ReadCardSerial()) 
-  {
-    return;
-  }
-  
-  //Show UID on serial monitor
-  Serial.println();
-  //Serial.print(" UID tag :");
-  content= "";
-  //byte letter;
-  
-  for (byte i = 0; i < mfrc522.uid.size; i++) 
-  {
-     Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
-     Serial.print(mfrc522.uid.uidByte[i], HEX);
-     content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " "));
-     content.concat(String(mfrc522.uid.uidByte[i], HEX));
-  }
-  content.toUpperCase();
-
-  Serial.println();
-  
-  if (content.substring(1) == "F9 1F A5 96") //change UID of the card that you want to give access
-  {
-    Serial.println(" Authorized Access ");
-    //Serial.println(" Welcome to my channel Mostly Programing ");
-    //Serial.println(" Learn Programming and Coding Skills ");
-    //delay(1000);
-    mySerial.write('L');
-  }
-  else
-  {
-    Serial.println(" Access Denied ");
-    //delay(3000);
-    mySerial.write('l');
-  }
-  */
-  delay(1);
 }
