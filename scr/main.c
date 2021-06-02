@@ -78,7 +78,7 @@ volatile uint16_t adc_value[2];
 volatile uint16_t x=0;
 
 volatile char data_receive;
-char buffer[20];
+char buffer[20],buffer1[20],buffer2[20],buffer3[20];
 
 char state_led_LVR=0, state_led_KCR=0, state_led_BedR=0, state_led_BaR=0, state_led_Garage=0;
 char state_fan_LVR=0, state_fan_KCR=0, state_fan_BedR=0;
@@ -92,10 +92,11 @@ int8_t key_enter[5];
 int8_t key;
 volatile uint8_t out=0;
 
+int i=0;
 
 int main(void)
 {
-	keypad_init();
+	//keypad_init();
 	timer6_delay_init();
 	/*
 	lcd_gpio();
@@ -132,6 +133,10 @@ int main(void)
 	
 	//GPIO_SetBits(GPIOB, GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4);
 	*/
+	uart2_init();
+	timer6_delay_init();
+	gpio_init();
+	
 	while(1)
 	{
 /*
@@ -163,8 +168,12 @@ int main(void)
 		uart_to_esp();
 
 		delay_10_us(800000);*/
-		key=read_keypad();
-		delay_10_us(50000);
+		//key=read_keypad();
+		delay_10_us(200000);
+		i++;
+		if(i>70) i=0;
+
+		uart_to_esp();
 	}
 }
 
@@ -494,153 +503,157 @@ void usart_send_string(char *s)
 }
 void uart_to_esp(void)
 {
-
+	
 	
 	//readDHT11();
-	sprintf(buffer,"#%d$",I_Temp);
-	usart_send_string(buffer);
-	sprintf(buffer,"^%d*",I_RH);
-	usart_send_string(buffer);
+	I_Temp=12+i;
+	I_RH=19+i;
+	sprintf(buffer1,"#%d$",I_Temp);
+	//usart_send_string(buffer1);
+	sprintf(buffer2,"^%d*",I_RH);
+	//usart_send_string(buffer2);
 	
 	//gas
-	if (adc_value[0]<100)
-		sprintf(buffer,"!00%d@",adc_value[0]);
-	else if (adc_value[0]<1000)
-		sprintf(buffer,"!0%d@",adc_value[0]);
-	else
-		sprintf(buffer,"!%d@",adc_value[0]);
+	adc_value[0]=123;
+	sprintf(buffer3,"!%d@",adc_value[0]);
+	//usart_send_string(buffer3);
 	
-	usart_send_string(buffer);
-	
-	buffer[0]='(';
 	state_led_LVR = GPIO_ReadOutputDataBit(GPIOB, led_LVR_pin);
 	if(state_led_LVR)
 	{
-		buffer[1]='M';
+		buffer[0]='M';
 	}
 	else
 	{
-		buffer[1]='m';
+		buffer[0]='m';
 	}
 	
 	state_led_KCR = GPIO_ReadOutputDataBit(GPIOB, led_KCR_pin);
 	if(state_led_KCR)
 	{
-		buffer[2]='N';
+		buffer[1]='N';
 	}
 	else
 	{
-		buffer[2]='n';
+		buffer[1]='n';
 	}
 	
 	state_led_BedR = GPIO_ReadOutputDataBit(GPIOB, led_BedR_pin);
 	if(state_led_BedR)
 	{
-		buffer[3]='O';
+		buffer[2]='O';
 	}
 	else
 	{
-		buffer[3]='o';
+		buffer[2]='o';
 	}
 	
 	state_led_BaR = GPIO_ReadOutputDataBit(GPIOB, led_BaR_pin);
 	if(state_led_BaR)
 	{
-		buffer[4]='P';
+		buffer[3]='P';
 	}
 	else
 	{
-		buffer[4]='p';
+		buffer[3]='p';
 	}
 	
 	state_led_Garage = GPIO_ReadOutputDataBit(GPIOB, led_Garage_pin);
 	if(state_led_Garage)
 	{
-		buffer[5]='Q';
+		buffer[4]='Q';
 	}
 	else
 	{
-		buffer[5]='q';
+		buffer[4]='q';
 	}
 	
 	state_fan_LVR = GPIO_ReadOutputDataBit(GPIOB, fan_LVR_pin);
 	if(state_fan_LVR==0)
 	{
-		buffer[6]='R';
+		buffer[5]='R';
 	}
 	else
 	{
-		buffer[6]='r';
+		buffer[5]='r';
 	}
 	
 	state_fan_KCR = GPIO_ReadOutputDataBit(GPIOB, fan_KCR_pin);
 	if(state_fan_KCR==0)
 	{
-		buffer[7]='S';
+		buffer[6]='S';
 	}
 	else
 	{
-		buffer[7]='s';
+		buffer[6]='s';
 	}
 	
 	state_fan_BedR = GPIO_ReadOutputDataBit(GPIOB, fan_BedR_pin);
 	if(state_fan_BedR)
 	{
-		buffer[8]='T';
+		buffer[7]='T';
 	}
 	else
 	{
-		buffer[8]='t';
+		buffer[7]='t';
 	}
 
 	if(state_door_garage)
 	{
-		buffer[9]='U';
+		buffer[8]='U';
 	}
 	else
 	{
-		buffer[9]='u';
+		buffer[8]='u';
 	}
 
 	if(state_clothes)
 	{
-		buffer[10]='V';
+		buffer[9]='V';
 	}
 	else
 	{
-		buffer[10]='v';
+		buffer[9]='v';
 	}
 
 	if(state_window)
 	{
-		buffer[11]='W';
+		buffer[10]='W';
 	}
 	else
 	{
-		buffer[11]='w';
+		buffer[10]='w';
 	}
 	
 	if(adc_value[0]>2500) state_gas=1;
 	else state_gas=0;
 	if(state_gas)
 	{
-		buffer[12]='X';
+		buffer[11]='X';
 	}
 	else
 	{
-		buffer[12]='x';
+		buffer[11]='x';
 	}
 	
 	if(state_fire)
 	{
-		buffer[13]='Y';
+		buffer[12]='Y';
 	}
 	else
 	{
-		buffer[13]='y';
+		buffer[12]='y';
 	}
+	usart_send_char('_');
+	usart_send_string(buffer1);
+	usart_send_string(buffer2);
+	usart_send_string(buffer3);
+	usart_send_string(buffer);
 	
-	buffer[14]=')';
+	usart_send_char('_');
+	usart_send_string(buffer1);
+	usart_send_string(buffer2);
+	usart_send_string(buffer3);
 	usart_send_string(buffer);
 }
 void lcd_gpio (void)
@@ -945,7 +958,7 @@ void USART2_IRQHandler(void)
 			case 'e':
 				GPIO_ResetBits(GPIOB, led_Garage_pin);
 				break;
-			
+			/*
 			case 'F':
 				GPIO_ResetBits(GPIOB, fan_LVR_pin);
 				break;
@@ -1026,7 +1039,7 @@ void USART2_IRQHandler(void)
 					delay_10_us(10000);
 				}
 				break;
-			
+			*/
 			default:
 				break;
 		}
