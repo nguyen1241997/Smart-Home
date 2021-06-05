@@ -169,7 +169,7 @@ int main(void)
 
 		delay_10_us(800000);*/
 		//key=read_keypad();
-		delay_10_us(200000);
+		delay_10_us(400000);
 		i++;
 		if(i>70) i=0;
 
@@ -644,12 +644,6 @@ void uart_to_esp(void)
 	{
 		buffer[12]='y';
 	}
-	usart_send_char('_');
-	usart_send_string(buffer1);
-	usart_send_string(buffer2);
-	usart_send_string(buffer3);
-	usart_send_string(buffer);
-	
 	usart_send_char('_');
 	usart_send_string(buffer1);
 	usart_send_string(buffer2);
