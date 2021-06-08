@@ -105,7 +105,6 @@ int main(void)
 	lcd_write(0,3,(int8_t *)"SMART HOME");
 	
 	//led_init();
-	//timer7_interrput();
 	
 	gpio_init();
 	GPIO_SetBits(GPIOB, fan_LVR_pin);//tich cuc thap
@@ -116,7 +115,6 @@ int main(void)
 	adc_dma_init();
 	uart2_init();
 	timer3_pwm_sg90();
-	//led_init();
 	timer7_interrput();
 	
 	exti0_init();//lcd interrupt
@@ -137,41 +135,16 @@ int main(void)
 	timer6_delay_init();
 	gpio_init();
 	
+	timer3_pwm_sg90();
+	TIM_SetCompare3(TIM3,80);;//close window
+
 	while(1)
 	{
-/*
-		//gas
-		if ((adc_value[0]<2500) && (state_window==0)) //close window
-		{
-			TIM_SetCompare3(TIM3,80);
-		}
-		else
-		{
-			state_window=1;
-			TIM_SetCompare3(TIM3,35);
-		}
-		
-		//water
-		if ((adc_value[1]>2000) && (state_clothes==1)) //open clothes
-		{
-			TIM_SetCompare1(TIM3,80);
-		}
-		else
-		{
-			state_clothes=0;
-			TIM_SetCompare1(TIM3,30);
-		}
-		
-		
-		readDHT11();
-		
-		uart_to_esp();
-
-		delay_10_us(800000);*/
+		//readDHT11();
 		//key=read_keypad();
-		delay_10_us(400000);
+		delay_10_us(200000);
 		i++;
-		if(i>70) i=0;
+		if(i>15) i=0;
 
 		uart_to_esp();
 	}
@@ -509,140 +482,143 @@ void uart_to_esp(void)
 	I_Temp=12+i;
 	I_RH=19+i;
 	sprintf(buffer1,"#%d$",I_Temp);
-	//usart_send_string(buffer1);
 	sprintf(buffer2,"^%d*",I_RH);
-	//usart_send_string(buffer2);
 	
 	//gas
-	adc_value[0]=123;
+	adc_value[0]=100+i;
 	sprintf(buffer3,"!%d@",adc_value[0]);
-	//usart_send_string(buffer3);
 	
 	state_led_LVR = GPIO_ReadOutputDataBit(GPIOB, led_LVR_pin);
 	if(state_led_LVR)
 	{
-		buffer[0]='M';
+		buffer[0]='A';
 	}
 	else
 	{
-		buffer[0]='m';
+		buffer[0]='a';
 	}
 	
 	state_led_KCR = GPIO_ReadOutputDataBit(GPIOB, led_KCR_pin);
 	if(state_led_KCR)
 	{
-		buffer[1]='N';
+		buffer[1]='B';
 	}
 	else
 	{
-		buffer[1]='n';
+		buffer[1]='b';
 	}
 	
 	state_led_BedR = GPIO_ReadOutputDataBit(GPIOB, led_BedR_pin);
 	if(state_led_BedR)
 	{
-		buffer[2]='O';
+		buffer[2]='C';
 	}
 	else
 	{
-		buffer[2]='o';
+		buffer[2]='c';
 	}
 	
 	state_led_BaR = GPIO_ReadOutputDataBit(GPIOB, led_BaR_pin);
 	if(state_led_BaR)
 	{
-		buffer[3]='P';
+		buffer[3]='D';
 	}
 	else
 	{
-		buffer[3]='p';
+		buffer[3]='d';
 	}
 	
 	state_led_Garage = GPIO_ReadOutputDataBit(GPIOB, led_Garage_pin);
 	if(state_led_Garage)
 	{
-		buffer[4]='Q';
+		buffer[4]='E';
 	}
 	else
 	{
-		buffer[4]='q';
+		buffer[4]='e';
 	}
 	
 	state_fan_LVR = GPIO_ReadOutputDataBit(GPIOB, fan_LVR_pin);
 	if(state_fan_LVR==0)
 	{
-		buffer[5]='R';
+		buffer[5]='F';
 	}
 	else
 	{
-		buffer[5]='r';
+		buffer[5]='f';
 	}
 	
 	state_fan_KCR = GPIO_ReadOutputDataBit(GPIOB, fan_KCR_pin);
 	if(state_fan_KCR==0)
 	{
-		buffer[6]='S';
+		buffer[6]='G';
 	}
 	else
 	{
-		buffer[6]='s';
+		buffer[6]='g';
 	}
 	
 	state_fan_BedR = GPIO_ReadOutputDataBit(GPIOB, fan_BedR_pin);
 	if(state_fan_BedR)
 	{
-		buffer[7]='T';
+		buffer[7]='H';
 	}
 	else
 	{
-		buffer[7]='t';
+		buffer[7]='h';
 	}
 
 	if(state_door_garage)
 	{
-		buffer[8]='U';
+		buffer[8]='I';
 	}
 	else
 	{
-		buffer[8]='u';
+		buffer[8]='i';
 	}
 
+	if ((adc_value[1]<2000)) state_clothes=0;
 	if(state_clothes)
 	{
-		buffer[9]='V';
+		buffer[9]='J';
 	}
 	else
 	{
-		buffer[9]='v';
+		buffer[9]='j';
 	}
 
+	if(adc_value[0]>110)
+	{
+		state_window=1;
+		TIM_SetCompare3(TIM3,35);;//open window
+	}
 	if(state_window)
 	{
-		buffer[10]='W';
+		buffer[10]='K';
 	}
 	else
 	{
-		buffer[10]='w';
+		buffer[10]='k';
 	}
 	
-	if(adc_value[0]>2500) state_gas=1;
+	if(adc_value[0]>110) state_gas=1;
 	else state_gas=0;
 	if(state_gas)
 	{
-		buffer[11]='X';
+		buffer[11]='L';
 	}
 	else
 	{
-		buffer[11]='x';
+		buffer[11]='l';
 	}
 	
 	if(state_fire)
 	{
-		buffer[12]='Y';
+		buffer[12]='M';
 	}
 	else
 	{
-		buffer[12]='y';
+		buffer[12]='m';
 	}
 	usart_send_char('_');
 	usart_send_string(buffer1);
@@ -1034,6 +1010,25 @@ void USART2_IRQHandler(void)
 				}
 				break;
 			*/
+			case 'J':
+				state_clothes=1;
+				break;
+			
+			case 'j':
+				state_clothes=0;
+				break;
+			
+			case 'K':
+				state_window=1;
+				TIM_SetCompare3(TIM3,35);;//open window
+				break;
+			
+			case 'k':
+				state_window=0;
+				TIM_SetCompare3(TIM3,80);;//close window
+				
+				break;
+			
 			default:
 				break;
 		}

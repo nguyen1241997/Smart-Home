@@ -17,7 +17,7 @@ String inputString = "";
 String inputString2 = "";
 
 String bf2[15], bf1[15];
-int rc[15], rc1[15];
+String rc[15], rc1[15];
 
 void send_firebase(void);
 void receive_uart(void);
@@ -44,8 +44,8 @@ void setup()
   {
     bf2[i]="0";
     bf1[i]="0";
-    rc[i]=0;
-    rc1[i]=0;
+    rc[i]="0";
+    rc1[i]="0";
   }
 }
 
@@ -122,128 +122,128 @@ void receive_uart(void)
 
 void send_firebase(void)
 {
+  if (inputString.indexOf('A') >= 0)
+  {
+    rc1[0]="1";
+  }
+  else if (inputString.indexOf('a') >= 0)
+  {
+    rc1[0]="0";
+  }
+
+  if (inputString.indexOf('B') >= 0)
+  {
+    rc1[1]="1";
+  }
+  else if (inputString.indexOf('b') >= 0)
+  {
+    rc1[1]="0";
+  }
+
+  if (inputString.indexOf('C') >= 0)
+  {
+    rc1[2]="1";
+  }
+  else if (inputString.indexOf('c') >= 0)
+  {
+    rc1[2]="0";
+  }
+
+  if (inputString.indexOf('D') >= 0)
+  {
+    rc1[3]="1";
+  }
+  else if (inputString.indexOf('d') >= 0)
+  {
+    rc1[3]="0";
+  }
+
+  if (inputString.indexOf('E') >= 0)
+  {
+    rc1[4]="1";
+  }
+  else if (inputString.indexOf('e') >= 0)
+  {
+    rc1[4]="0";
+  }
+
+  if (inputString.indexOf('F') >= 0)
+  {
+    rc1[5]="1";
+  }
+  else if (inputString.indexOf('f') >= 0)
+  {
+    rc1[5]="0";
+  }
+
+  if (inputString.indexOf('G') >= 0)
+  {
+    rc1[6]="1";
+  }
+  else if (inputString.indexOf('g') >= 0)
+  {
+    rc1[6]="0";
+  }
+
+  if (inputString.indexOf('H') >= 0)
+  {
+    rc1[7]="1";
+  }
+  else if (inputString.indexOf('h') >= 0)
+  {
+    rc1[7]="0";
+  }
+
+  if (inputString.indexOf('I') >= 0)
+  {
+    rc1[8]="1";
+  }
+  else if (inputString.indexOf('i') >= 0)
+  {
+    rc1[8]="0";
+  }
+
+  if (inputString.indexOf('J') >= 0)
+  {
+    rc1[9]="1";
+  }
+  else if (inputString.indexOf('j') >= 0)
+  {
+    rc1[9]="0";
+  }
+
+  if (inputString.indexOf('K') >= 0)
+  {
+    rc1[10]="1";
+  }
+  else if (inputString.indexOf('k') >= 0)
+  {
+    rc1[10]="0";
+  }
+
+  if (inputString.indexOf('L') >= 0)
+  {
+    rc1[11]="1";
+  }
+  else if (inputString.indexOf('l') >= 0)
+  {
+    rc1[11]="0";
+  }
+
   if (inputString.indexOf('M') >= 0)
   {
-    rc1[0]=1;
+    rc1[12]="1";
   }
   else if (inputString.indexOf('m') >= 0)
   {
-    rc1[0]=0;
-  }
-
-  if (inputString.indexOf('N') >= 0)
-  {
-    rc1[1]=1;
-  }
-  else if (inputString.indexOf('n') >= 0)
-  {
-    rc1[1]=0;
-  }
-
-  if (inputString.indexOf('O') >= 0)
-  {
-    rc1[2]=1;
-  }
-  else if (inputString.indexOf('o') >= 0)
-  {
-    rc1[2]=0;
-  }
-
-  if (inputString.indexOf('P') >= 0)
-  {
-    rc1[3]=1;
-  }
-  else if (inputString.indexOf('p') >= 0)
-  {
-    rc1[3]=0;
-  }
-
-  if (inputString.indexOf('Q') >= 0)
-  {
-    rc1[4]=1;
-  }
-  else if (inputString.indexOf('q') >= 0)
-  {
-    rc1[4]=0;
-  }
-
-  if (inputString.indexOf('R') >= 0)
-  {
-    rc1[5]=1;
-  }
-  else if (inputString.indexOf('r') >= 0)
-  {
-    rc1[5]=0;
-  }
-
-  if (inputString.indexOf('S') >= 0)
-  {
-    rc1[6]=1;
-  }
-  else if (inputString.indexOf('s') >= 0)
-  {
-    rc1[6]=0;
-  }
-
-  if (inputString.indexOf('T') >= 0)
-  {
-    rc1[7]=1;
-  }
-  else if (inputString.indexOf('t') >= 0)
-  {
-    rc1[7]=0;
-  }
-
-  if (inputString.indexOf('U') >= 0)
-  {
-    rc1[8]=1;
-  }
-  else if (inputString.indexOf('u') >= 0)
-  {
-    rc1[8]=0;
-  }
-
-  if (inputString.indexOf('V') >= 0)
-  {
-    rc1[9]=1;
-  }
-  else if (inputString.indexOf('v') >= 0)
-  {
-    rc1[9]=0;
-  }
-
-  if (inputString.indexOf('W') >= 0)
-  {
-    rc1[10]=1;
-  }
-  else if (inputString.indexOf('w') >= 0)
-  {
-    rc1[10]=0;
-  }
-
-  if (inputString.indexOf('X') >= 0)
-  {
-    rc1[11]=1;
-  }
-  else if (inputString.indexOf('x') >= 0)
-  {
-    rc1[11]=0;
-  }
-
-  if (inputString.indexOf('Y') >= 0)
-  {
-    rc1[12]=1;
-  }
-  else if (inputString.indexOf('y') >= 0)
-  {
-    rc1[12]=0;
+    rc1[12]="0";
   }
 
   //send data to firebase
-  if (rc1[0] != rc[0])
+  if (rc1[0] != bf1[0])
   {
-    rc[0] = rc1[0];
-    if(rc1[0]==1)
+    bf1[0] = rc1[0];
+    if(rc1[0]=="1")
     {
       Firebase.setInt("state_led_LVR", 1);
     }
@@ -253,10 +253,10 @@ void send_firebase(void)
     }
   }
 
-  if (rc1[1] != rc[1])
+  if (rc1[1] != bf1[1])
   {
-    rc[1] = rc1[1];
-    if(rc1[1]==1)
+    bf1[1] = rc1[1];
+    if(rc1[1]=="1")
     {
       Firebase.setInt("state_led_KCR", 1);
     }
@@ -266,10 +266,10 @@ void send_firebase(void)
     }
   }
 
-  if (rc1[2] != rc[2])
+  if (rc1[2] != bf1[2])
   {
-    rc[2] = rc1[2];
-    if(rc1[2]==1)
+    bf1[2] = rc1[2];
+    if(rc1[2]=="1")
     {
       Firebase.setInt("state_led_BedR", 1);
     }
@@ -279,10 +279,10 @@ void send_firebase(void)
     }
   }
 
-  if (rc1[3] != rc[3])
+  if (rc1[3] != bf1[3])
   {
-    rc[3] = rc1[3];
-    if(rc1[3]==1)
+    bf1[3] = rc1[3];
+    if(rc1[3]=="1")
     {
       Firebase.setInt("state_led_BaR", 1);
     }
@@ -292,10 +292,10 @@ void send_firebase(void)
     }
   }
 
-  if (rc1[4] != rc[4])
+  if (rc1[4] != bf1[4])
   {
-    rc[4] = rc1[4];
-    if(rc1[4]==1)
+    bf1[4] = rc1[4];
+    if(rc1[4]=="1")
     {
       Firebase.setInt("state_led_garage", 1);
     }
@@ -304,11 +304,11 @@ void send_firebase(void)
       Firebase.setInt("state_led_garage", 0);
     }
   }
-
-  if (rc1[5] != rc[5])
+/*
+  if (rc1[5] != bf1[5])
   {
-    rc[5] = rc1[5];
-    if(rc1[5]==1)
+    bf1[5] = rc1[5];
+    if(rc1[5]=="1")
     {
       Firebase.setInt("state_fan_LVR", 1);
     }
@@ -318,10 +318,10 @@ void send_firebase(void)
     }
   }
 
-  if (rc1[6] != rc[6])
+  if (rc1[6] != bf1[6])
   {
-    rc[6] = rc1[6];
-    if(rc1[6]==1)
+    bf1[6] = rc1[6];
+    if(rc1[6]=="1")
     {
       Firebase.setInt("state_fan_KCR", 1);
     }
@@ -331,10 +331,10 @@ void send_firebase(void)
     }
   }
 
-  if (rc1[7] != rc[7])
+  if (rc1[7] != bf1[7])
   {
-    rc[7] = rc1[7];
-    if(rc1[7]==1)
+    bf1[7] = rc1[7];
+    if(rc1[7]=="1")
     {
       Firebase.setInt("state_fan_BedR", 1);
     }
@@ -344,10 +344,10 @@ void send_firebase(void)
     }
   }
 
-  if (rc1[8] != rc[8])
+  if (rc1[8] != bf1[8])
   {
-    rc[8] = rc1[8];
-    if(rc1[8]==1)
+    bf1[8] = rc1[8];
+    if(rc1[8]=="1")
     {
       Firebase.setInt("state_door_garage", 1);
     }
@@ -356,26 +356,28 @@ void send_firebase(void)
       Firebase.setInt("state_door_garage", 0);
     }
   }
-
-  if (rc1[9] != rc[9])
+*/
+  if (rc1[9] != bf1[9])
   {
-    rc[9] = rc1[9];
-    if(rc1[9]==1)
+    bf1[9] = rc1[9];
+    if(rc1[9]=="1")
     {
       Firebase.setInt("state_clothes", 1);
     }
     else
     {
       Firebase.setInt("state_clothes", 0);
+      Firebase.setString("control_clothes","0");
     }
   }
 
-  if (rc1[10] != rc[10])
+  if (rc1[10] != bf1[10])
   {
-    rc[10] = rc1[10];
-    if(rc1[10]==1)
+    bf1[10] = rc1[10];
+    if(rc1[10]=="1")
     {
       Firebase.setInt("state_window", 1);
+      Firebase.setString("control_window","1");
     }
     else
     {
@@ -383,10 +385,10 @@ void send_firebase(void)
     }
   }
 
-  if (rc1[11] != rc[11])
+  if (rc1[11] != bf1[11])
   {
-    rc[11] = rc1[11];
-    if(rc1[11]==1)
+    bf1[11] = rc1[11];
+    if(rc1[11]=="1")
     {
       Firebase.setInt("state_gas", 1);
     }
@@ -396,10 +398,10 @@ void send_firebase(void)
     }
   }
 
-  if (rc1[12] != rc[12])
+  if (rc1[12] != bf1[12])
   {
-    rc[12] = rc1[12];
-    if(rc1[12]==1)
+    bf1[12] = rc1[12];
+    if(rc1[12]=="1")
     {
       Firebase.setInt("state_fire", 1);
     }
@@ -415,15 +417,14 @@ void Get_data_Firebase2(void)
   bf2[0]=Firebase.getString("control_led_LVR");
   if (bf2[0]!=bf1[0])
   {
-    bf1[0]=bf2[0];
     if(bf2[0]=="1") mySerial.write('A');
     else mySerial.write('a');
   }
+  int x=1;
 
   bf2[1]=Firebase.getString("control_led_KCR");
   if (bf2[1]!=bf1[1])
   {
-    bf1[1]=bf2[1];
     if(bf2[1]=="1") mySerial.write('B');
     else mySerial.write('b');
   }
@@ -431,7 +432,6 @@ void Get_data_Firebase2(void)
   bf2[2]=Firebase.getString("control_led_BedR");
   if (bf2[2]!=bf1[2])
   {
-    bf1[2]=bf2[2];
     if(bf2[2]=="1") mySerial.write('C');
     else mySerial.write('c');
   }
@@ -439,7 +439,6 @@ void Get_data_Firebase2(void)
   bf2[3]=Firebase.getString("control_led_BaR");
   if (bf2[3]!=bf1[3])
   {
-    bf1[3]=bf2[3];
     if(bf2[3]=="1") mySerial.write('D');
     else mySerial.write('d');
   }
@@ -447,15 +446,13 @@ void Get_data_Firebase2(void)
   bf2[4]=Firebase.getString("control_led_garage");
   if (bf2[4]!=bf1[4])
   {
-    bf1[4]=bf2[4];
     if(bf2[4]=="1") mySerial.write('E');
     else mySerial.write('e');
   }
-
+/*
   bf2[5]=Firebase.getString("control_fan_LVR");
   if (bf2[5]!=bf1[5])
   {
-    bf1[5]=bf2[5];
     if(bf2[5]=="1") mySerial.write('F');
     else mySerial.write('f');
   }
@@ -463,7 +460,6 @@ void Get_data_Firebase2(void)
   bf2[6]=Firebase.getString("control_fan_LVR");
   if (bf2[6]!=bf1[6])
   {
-    bf1[6]=bf2[6];
     if(bf2[6]=="1") mySerial.write('G');
     else mySerial.write('g');
   }
@@ -471,7 +467,6 @@ void Get_data_Firebase2(void)
   bf2[7]=Firebase.getString("control_fan_BedR");
   if (bf2[7]!=bf1[7])
   {
-    bf1[7]=bf2[7];
     if(bf2[7]=="1") mySerial.write('H');
     else mySerial.write('h');
   }
@@ -479,23 +474,20 @@ void Get_data_Firebase2(void)
   bf2[8]=Firebase.getString("control_door_garage");
   if (bf2[8]!=bf1[8])
   {
-    bf1[8]=bf2[8];
     if(bf2[8]=="1") mySerial.write('I');
     else mySerial.write('i');
   }
-
+*/
   bf2[9]=Firebase.getString("control_clothes");
   if (bf2[9]!=bf1[9])
   {
-    bf1[9]=bf2[9];
     if(bf2[9]=="1") mySerial.write('J');
     else mySerial.write('j');
   }
 
-  bf2[10]=Firebase.getString("control_clothes");
+  bf2[10]=Firebase.getString("control_window");
   if (bf2[10]!=bf1[10])
   {
-    bf1[10]=bf2[10];
     if(bf2[10]=="1") mySerial.write('K');
     else mySerial.write('k');
   }
