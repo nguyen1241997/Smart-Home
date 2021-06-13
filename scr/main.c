@@ -67,6 +67,7 @@ void lcd_gpio(void);
 void keypad_init(void);
 int8_t read_keypad (void);
 void check_password(int8_t key_var);
+void check_password2(int8_t key_var);
 
 void exti0_init(void);
 
@@ -93,6 +94,8 @@ int8_t key;
 volatile uint8_t out=0;
 
 int i=0;
+
+// 100000=1s
 
 int main(void)
 {
@@ -137,16 +140,21 @@ int main(void)
 	
 	timer3_pwm_sg90();
 	TIM_SetCompare3(TIM3,80);;//close window
+	TIM_SetCompare1(TIM3,30);//close clothes
+	
+	led_init();
+	timer7_interrput();
 
 	while(1)
 	{
 		//readDHT11();
+		
+		
 		//key=read_keypad();
-		delay_10_us(200000);
-		i++;
-		if(i>15) i=0;
-
-		uart_to_esp();
+		//check_password2(key);
+		
+		
+		delay_10_us(20000);
 	}
 }
 
@@ -577,7 +585,11 @@ void uart_to_esp(void)
 		buffer[8]='i';
 	}
 
-	if ((adc_value[1]<2000)) state_clothes=0;
+	if ((adc_value[1]<2000))
+	{
+		state_clothes=0;
+		TIM_SetCompare1(TIM3,30);//close clothes
+	}
 	if(state_clothes)
 	{
 		buffer[9]='J';
@@ -806,6 +818,32 @@ void check_password(int8_t key_var)
 		}
 	}
 }
+void check_password2(int8_t key_var)
+{
+	if(key_var != 'X')
+	{
+		key_enter[check] = key_var;
+		check++;
+		if(check == 5)
+		{
+			for(int i=0;i<5;i++)
+			{
+				if(key_enter[i] != password[i])
+				{
+					break;
+					check=0;
+				}
+			}
+			if (check == 5)
+			{
+				TIM_SetCompare2(TIM3,40);//open
+				delay_10_us(500000);
+				TIM_SetCompare2(TIM3,90);//close
+			}
+			check=0;
+		}
+	}
+}
 void exti0_init(void)
 {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD,ENABLE);
@@ -879,6 +917,9 @@ void TIM7_IRQHandler(void) //2s
 	{
 		TIM_ClearITPendingBit(TIM7, TIM_IT_Update);
 		GPIO_ToggleBits(GPIOD, GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15);
+		i++;
+		if(i>15) i=0;
+		uart_to_esp();
 	}
 }
 void USART2_IRQHandler(void)
@@ -963,26 +1004,6 @@ void USART2_IRQHandler(void)
 				TIM_SetCompare1(TIM12,75);
 				break;
 			
-			case 'J':
-				state_clothes=1;
-				TIM_SetCompare1(TIM3,80);
-				break;
-			
-			case 'j':
-				state_clothes=0;
-				TIM_SetCompare1(TIM3,30);
-				break;
-			
-			case 'K':
-				state_window=1;
-				TIM_SetCompare3(TIM3,35);
-				break;
-			
-			case 'k':
-				state_window=0;
-				TIM_SetCompare3(TIM3,80);
-				break;
-			
 			case '0': //turn off buzzer
 				GPIO_ResetBits(GPIOB, GPIO_Pin_10);
 				state_fire = 0;
@@ -1012,10 +1033,12 @@ void USART2_IRQHandler(void)
 			*/
 			case 'J':
 				state_clothes=1;
+				TIM_SetCompare1(TIM3,75);//open clothes
 				break;
 			
 			case 'j':
 				state_clothes=0;
+				TIM_SetCompare1(TIM3,30);//close clothes
 				break;
 			
 			case 'K':
