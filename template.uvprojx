@@ -417,6 +417,21 @@
               <FileType>5</FileType>
               <FilePath>.\scr\lcd.h</FilePath>
             </File>
+            <File>
+              <FileName>main.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\scr\main.h</FilePath>
+            </File>
+            <File>
+              <FileName>mfrc522.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\scr\mfrc522.h</FilePath>
+            </File>
+            <File>
+              <FileName>mfrc522.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\scr\mfrc522.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

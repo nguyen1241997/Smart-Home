@@ -3,6 +3,7 @@
 ".\objects\system_stm32f4xx.o"
 ".\objects\main.o"
 ".\objects\lcd.o"
+".\objects\mfrc522.o"
 ".\objects\startup_stm32f40xx.o"
 ".\objects\stm32f4xx_gpio.o"
 ".\objects\stm32f4xx_rcc.o"

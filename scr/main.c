@@ -1,91 +1,28 @@
 #include "stm32f4xx.h"
 #include <stdio.h>
-#include "stm32f4xx_tim.h"
-#include "stm32f4xx_exti.h"
+#include <string.h>
 #include "lcd.h"
+#include "main.h"
+#include "mfrc522.h"
 
-#define led_LVR_pin			GPIO_Pin_0
-#define led_KCR_pin			GPIO_Pin_1
-#define led_BedR_pin		GPIO_Pin_2
-#define led_BaR_pin			GPIO_Pin_3
-#define led_Garage_pin	GPIO_Pin_4
-#define fan_LVR_pin			GPIO_Pin_6
-#define fan_KCR_pin			GPIO_Pin_5
-#define fan_BedR_pin		GPIO_Pin_7
+uint8_t status;
+uint8_t g_ucTempbuf[4];
+bool flag_loop=0;
+uint8_t defaultKeyA[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+uint8_t MyID[4] = {0x81,0x46,0xec,0x09};
+int c=0;
 
-/*
--PA6: DHT11
--PA0: gas sensor
--PA1: water sensor
--PA2-PA3: TX-RX
--PA7: LCD contrast
-
--PB0-PB7: gpio
--PB8-9: led-gate
--PB10: buzz
-
--PC6-PC8: servo: 20~140
--PC8: window
--PC7: garage door / door
--PC6: clothes
--PC9: gate
--PC0-PC3: KEYPAD IN --5678
-
--PD0: button
--PD2-5: KEYPAD OUT --1234
-
--PE0-PE5: LCD
-*/
-
-void exti0_init(void);
-
-void timer6_delay_init(void);
-void delay_10_us(uint32_t time);
-
-void led_init(void);
-
-void request_dht11(void);
-void response_dht11(void);
-uint8_t receive_dht11(void);
-void readDHT11(void);
-	
-void adc_dma_init(void);
-
-void timer3_pwm_sg90(void);
-
-void timer7_interrput(void);
-
-void gpio_init(void);
-
-void uart2_init(void);
-void usart_send_char(char data);
-void usart_send_string(char *s);
-
-void uart_to_esp(void);
-
-void lcd_gpio(void);
-void keypad_init(void);
-int8_t read_keypad (void);
-void check_password(int8_t key_var);
-void check_password2(int8_t key_var);
-
-void exti0_init(void);
-
-void fire_sensor_init(void);
-
-uint8_t c=0, I_RH=0, D_RH, I_Temp=0, D_Temp;
+uint8_t I_RH=0, D_RH, I_Temp=0, D_Temp;
+bool flag_dht = false;
 
 volatile uint16_t adc_value[2];
+
 volatile uint16_t x=0;
 
 volatile char data_receive;
-char buffer[20],buffer1[20],buffer2[20],buffer3[20];
+char buffer1[20];
+char buffer[10];
 
-char state_led_LVR=0, state_led_KCR=0, state_led_BedR=0, state_led_BaR=0, state_led_Garage=0;
-char state_fan_LVR=0, state_fan_KCR=0, state_fan_BedR=0;
-char state_door_garage=0, state_clothes=0, state_window=0, state_gate=0, state_gas=0, state_fire=0;
-
-volatile char gate_check=0;
 
 int8_t password[5]={"12345"};
 int8_t check=0;
@@ -93,68 +30,222 @@ int8_t key_enter[5];
 int8_t key;
 volatile uint8_t out=0;
 
-int i=0;
-
-// 100000=1s
-
 int main(void)
 {
+	
+	
 	//keypad_init();
-	timer6_delay_init();
 	/*
 	lcd_gpio();
 	lcd_init();
 	lcd_write(0,0,(int8_t *)" ");
 	lcd_write(0,3,(int8_t *)"SMART HOME");
 	
-	//led_init();
 	
-	gpio_init();
-	GPIO_SetBits(GPIOB, fan_LVR_pin);//tich cuc thap
-	GPIO_SetBits(GPIOB, fan_KCR_pin);
-	//GPIO_SetBits(GPIOB, fan_BedR_pin);
-	timer6_delay_init();
 	
 	adc_dma_init();
-	uart2_init();
-	timer3_pwm_sg90();
-	timer7_interrput();
 	
 	exti0_init();//lcd interrupt
 	
 	fire_sensor_init();
 	
-	TIM_SetCompare1(TIM3,30);//close clothes
-
-	TIM_SetCompare3(TIM3,80);;//close window
-	TIM_SetCompare1(TIM14,440);//lcd contrast
-	TIM_SetCompare1(TIM12,75); //garage door
-	TIM_SetCompare4(TIM3,55); //close gate
-	TIM_SetCompare2(TIM3,90);//close door
-	
-	//GPIO_SetBits(GPIOB, GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4);
 	*/
-	uart2_init();
-	timer6_delay_init();
-	gpio_init();
-	
-	timer3_pwm_sg90();
-	TIM_SetCompare3(TIM3,80);;//close window
-	TIM_SetCompare1(TIM3,30);//close clothes
-	
 	led_init();
+	gpio_init();
 	timer7_interrput();
+	timer6_delay_init();
+	timer3_pwm_sg90();
+	uart2_init();
+	
+	MF522_init();
+  MFRC522_Reset();
+  MFRC522_AntennaOn();
+	CLOSE_GATE;
 
 	while(1)
 	{
-		//readDHT11();
 		
 		
 		//key=read_keypad();
 		//check_password2(key);
+//		if (adc_value[0]>110)
+//		{
+//			TIM_SetCompare3(TIM3,35);;//open window
+//			strcat(buffer,"KL");
+//		}
+//		else
+//		{
+//			strcat(buffer,"l");
+//		}
+//				
+
+		if (flag_dht)
+		{
+			flag_dht = false;
+//			readDHT11();
+//			uart_to_esp();
+		}
+		check_RFID();
+		delay_ms(50);
+	}
+}
+
+
+//interrupt program
+void TIM7_IRQHandler(void) //3s
+{
+	if (TIM_GetITStatus(TIM7, TIM_IT_Update) != RESET)
+	{
+		TIM_ClearITPendingBit(TIM7, TIM_IT_Update);
+		GPIO_ToggleBits(GPIOD, GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15);
+		flag_dht = true;
+	}
+}
+
+void USART2_IRQHandler(void)
+{
+	if(USART_GetITStatus(USART2, USART_IT_RXNE) == SET)
+	{
+		data_receive = USART_ReceiveData(USART2);
 		
+		char x = data_receive;
 		
-		delay_10_us(20000);
+		strcat(buffer,&x);
+		
+		switch(data_receive)
+		{
+			case 'A':
+				GPIO_SetBits(GPIO_PORT, LED_LVR_PIN);
+				break;
+			
+			case 'a':
+				GPIO_ResetBits(GPIO_PORT, LED_LVR_PIN);
+				break;
+			
+			case 'B':
+				GPIO_SetBits(GPIO_PORT, LED_KCR_PIN);
+				break;
+			
+			case 'b':
+				GPIO_ResetBits(GPIO_PORT, LED_KCR_PIN);
+				break;
+			
+			case 'C':
+				GPIO_SetBits(GPIO_PORT, LED_BedR_PIN);
+				break;
+			
+			case 'c':
+				GPIO_ResetBits(GPIO_PORT, LED_BedR_PIN);
+				break;
+			
+			case 'D':
+				GPIO_SetBits(GPIO_PORT, LED_BaR_PIN);
+				break;
+			
+			case 'd':
+				GPIO_ResetBits(GPIO_PORT, LED_BaR_PIN);
+				break;
+			
+			case 'E':
+				GPIO_SetBits(GPIO_PORT, LED_Garage_PIN);
+				break;
+			
+			case 'e':
+				GPIO_ResetBits(GPIO_PORT, LED_Garage_PIN);
+				break;
+			
+			case 'F':
+				GPIO_SetBits(GPIO_PORT, FAN_LVR_PIN);
+				break;
+			
+			case 'f':
+				GPIO_SetBits(GPIO_PORT, FAN_LVR_PIN);
+				break;
+			
+			case 'G':
+				GPIO_SetBits(GPIO_PORT, FAN_KCR_PIN);
+				break;
+			
+			case 'g':
+				GPIO_SetBits(GPIO_PORT, FAN_KCR_PIN);
+				break;
+			
+			case 'H':
+				GPIO_SetBits(GPIO_PORT, FAN_BedR_PIN);
+				break;
+			
+			case 'h':
+				GPIO_ResetBits(GPIO_PORT, FAN_BedR_PIN);
+				break;
+			
+			case 'I':
+				OPEN_GARAGE;
+				break;
+			
+			case 'i':
+				CLOSE_GARAGE;
+				break;
+			
+			case 'J':
+				if (adc_value[1]>110)	OPEN_CLOTHES;
+				break;
+			
+			case 'j':
+				CLOSE_CLOTHES;
+				break;
+			
+			case 'K':
+				OPEN_WINDOW;
+				break;
+			
+			case 'k':
+				if (adc_value[0]>110)	CLOSE_WINDOW;
+				break;
+			
+			default:
+				break;
+		}
+		
+		USART_ClearITPendingBit(USART2,USART_IT_RXNE);
+	}
+}
+void EXTI0_IRQHandler(void)
+{
+	if(EXTI_GetITStatus(EXTI_Line0)!=RESET)
+	{
+		delay_10_us(10000);
+		if(GPIO_ReadInputDataBit(GPIOD,GPIO_Pin_0)==RESET)
+		{
+			x++;
+			lcd_write(0,0,(int8_t *)"Nhap mat khau:  ");
+			lcd_write(1,0,(int8_t *)"      ");
+			while(1)
+			{
+				key = read_keypad();
+				check_password(key);
+				delay_10_us(10000);//100ms
+				if (out)
+				{
+					out=0;
+					break;
+				}
+			}
+		}
+		EXTI_ClearITPendingBit(EXTI_Line0);
+	}
+}
+void EXTI1_IRQHandler(void)
+{
+	if(EXTI_GetITStatus(EXTI_Line1)!=RESET)
+	{
+		delay_10_us(10000);
+		if(GPIO_ReadInputDataBit(GPIOD,GPIO_Pin_1)==RESET)
+		{	
+			//state_fire = 1;
+			GPIO_SetBits(GPIOB, GPIO_Pin_10);//buzzer
+			strcat(buffer,"M");
+		}
+		EXTI_ClearITPendingBit(EXTI_Line1);
 	}
 }
 
@@ -164,6 +255,14 @@ void delay_10_us(uint32_t time)
 	{
 		TIM_SetCounter(TIM6,0);
 		while(TIM_GetCounter(TIM6)<10);
+	}
+}
+void delay_ms(uint32_t time)
+{
+	for(int i=0; i<time; i++)
+	{
+		TIM_SetCounter(TIM6,0);
+		while(TIM_GetCounter(TIM6)<1000);
 	}
 }
 
@@ -177,6 +276,7 @@ void timer6_delay_init(void)
 	TIM_TimeBaseInit(TIM6,&myTimer6);
 	TIM_Cmd(TIM6,ENABLE);
 }
+
 void led_init(void)
 {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD,ENABLE);
@@ -200,14 +300,14 @@ void request_dht11(void)
 	DHT11_TypeDef.GPIO_OType = GPIO_OType_PP;
 	DHT11_TypeDef.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	DHT11_TypeDef.GPIO_Speed = GPIO_High_Speed;
-	DHT11_TypeDef.GPIO_Pin = GPIO_Pin_6;
+	DHT11_TypeDef.GPIO_Pin = GPIO_Pin_8;
 	GPIO_Init(GPIOA,&DHT11_TypeDef);
 	
-	GPIO_ResetBits(GPIOA, GPIO_Pin_6);
+	GPIO_ResetBits(DHT11_PORT, DHT11_PIN);
 	
-	delay_10_us(2000);
+	delay_ms(20);
 	
-	GPIO_SetBits(GPIOA, GPIO_Pin_6);
+	GPIO_SetBits(DHT11_PORT, DHT11_PIN);
 }
 
 void response_dht11(void)
@@ -220,31 +320,34 @@ void response_dht11(void)
 	DHT11_TypeDef.GPIO_OType = GPIO_OType_PP;
 	DHT11_TypeDef.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	DHT11_TypeDef.GPIO_Speed = GPIO_High_Speed;
-	DHT11_TypeDef.GPIO_Pin = GPIO_Pin_6;
+	DHT11_TypeDef.GPIO_Pin = GPIO_Pin_8;
 	GPIO_Init(GPIOA,&DHT11_TypeDef);
 	
-	while(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_6));
-	while(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_6)==0);
-	while(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_6));
+	while(GPIO_ReadInputDataBit(DHT11_PORT,DHT11_PIN));
+	while(GPIO_ReadInputDataBit(DHT11_PORT,DHT11_PIN)==0);
+	while(GPIO_ReadInputDataBit(DHT11_PORT,DHT11_PIN));
 }
+
 uint8_t receive_dht11(void)
 {
-	for (int q=0; q<8; q++)
+	int t = 0;
+	for (int i=0; i<8; i++)
 	{
-		while(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_6)==0);
+		while(GPIO_ReadInputDataBit(DHT11_PORT,DHT11_PIN)==0);
 		delay_10_us(5);
-		if(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_6))/* if high pulse is greater than 30us */
+		if(GPIO_ReadInputDataBit(DHT11_PORT,DHT11_PIN))/* if high pulse is greater than 30us */
 		{
-			c = (c<<1)|(0x01);
-		}			/* then its logic HIGH */
-		else
-		{			/* otherwise its logic LOW */
-			c = (c<<1);
+			t |= (1<<(7-i));
 		}
-		while(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_6));
+		else
+		{
+			t &= ~(1<<(7-i));
+		}
+		while(GPIO_ReadInputDataBit(DHT11_PORT,DHT11_PIN));
 	}
-	return c;
+	return t;
 }
+
 void readDHT11(void)
 {
 		request_dht11();
@@ -254,6 +357,7 @@ void readDHT11(void)
 		I_Temp=receive_dht11();
 		D_Temp=receive_dht11();	
 }
+
 void adc_dma_init(void)
 {
 	ADC_InitTypeDef myADC;
@@ -313,15 +417,14 @@ void adc_dma_init(void)
 	
 	ADC_SoftwareStartConv(ADC1);
 }
+
 void timer3_pwm_sg90(void)
 {
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3,ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC,ENABLE);
 
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM14,ENABLE); //PA7
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA,ENABLE);
 	
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM12,ENABLE); //Pb14
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM12,ENABLE); //PB14 PB15
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB,ENABLE);
 	
 	GPIO_InitTypeDef myGPIO;
@@ -332,20 +435,12 @@ void timer3_pwm_sg90(void)
 	myGPIO.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9;
 	GPIO_Init(GPIOC,&myGPIO);
 	
-	GPIO_InitTypeDef myGPIO2;
-	myGPIO2.GPIO_Mode = GPIO_Mode_AF;
-	myGPIO2.GPIO_OType = GPIO_OType_PP;
-	myGPIO2.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	myGPIO2.GPIO_Speed = GPIO_Low_Speed;
-	myGPIO2.GPIO_Pin = GPIO_Pin_7;
-	GPIO_Init(GPIOA,&myGPIO2);
-	
 	GPIO_InitTypeDef myGPIO3;
 	myGPIO3.GPIO_Mode = GPIO_Mode_AF;
 	myGPIO3.GPIO_OType = GPIO_OType_PP;
 	myGPIO3.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	myGPIO3.GPIO_Speed = GPIO_Low_Speed;
-	myGPIO3.GPIO_Pin = GPIO_Pin_14;
+	myGPIO3.GPIO_Pin = GPIO_Pin_14 | GPIO_Pin_15;
 	GPIO_Init(GPIOB,&myGPIO3);
 	
 	TIM_TimeBaseInitTypeDef myTimer;
@@ -355,8 +450,6 @@ void timer3_pwm_sg90(void)
 	myTimer.TIM_CounterMode = TIM_CounterMode_Up;
 	TIM_TimeBaseInit(TIM3,&myTimer);
 	TIM_Cmd(TIM3,ENABLE);
-	TIM_TimeBaseInit(TIM14,&myTimer);
-	TIM_Cmd(TIM14,ENABLE);
 	TIM_TimeBaseInit(TIM12,&myTimer);
 	TIM_Cmd(TIM12,ENABLE);
 	
@@ -369,33 +462,31 @@ void timer3_pwm_sg90(void)
 	TIM_OC2Init(TIM3,&myPWM);
 	TIM_OC3Init(TIM3,&myPWM);
 	TIM_OC4Init(TIM3,&myPWM);
-	TIM_OC1Init(TIM14,&myPWM);
 	TIM_OC1Init(TIM12,&myPWM);
+	TIM_OC2Init(TIM12,&myPWM);
 	
 	TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
 	TIM_OC2PreloadConfig(TIM3, TIM_OCPreload_Enable);
 	TIM_OC3PreloadConfig(TIM3, TIM_OCPreload_Enable);
 	TIM_OC4PreloadConfig(TIM3, TIM_OCPreload_Enable);
-	TIM_OC1PreloadConfig(TIM14, TIM_OCPreload_Enable);
 	TIM_OC1PreloadConfig(TIM12, TIM_OCPreload_Enable);
+	TIM_OC2PreloadConfig(TIM12, TIM_OCPreload_Enable);
 	
 	GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_TIM3);
 	GPIO_PinAFConfig(GPIOC, GPIO_PinSource7, GPIO_AF_TIM3);
 	GPIO_PinAFConfig(GPIOC, GPIO_PinSource8, GPIO_AF_TIM3);
 	GPIO_PinAFConfig(GPIOC, GPIO_PinSource9, GPIO_AF_TIM3);
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource7, GPIO_AF_TIM14);
 	GPIO_PinAFConfig(GPIOB, GPIO_PinSource14, GPIO_AF_TIM12);
+	GPIO_PinAFConfig(GPIOB, GPIO_PinSource15, GPIO_AF_TIM12);
 }
 
 void timer7_interrput(void)
 {
-	//interrupt every 2s
-	
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7,ENABLE);
 	
 	TIM_TimeBaseInitTypeDef myTim7;
 	myTim7.TIM_Prescaler = 8400-1;
-	myTim7.TIM_Period = 20000-1;
+	myTim7.TIM_Period = 30000-1; //10000=1s
 	myTim7.TIM_CounterMode = TIM_CounterMode_Up;
 	TIM_TimeBaseInit(TIM7,&myTim7);
 	TIM_ITConfig(TIM7,TIM_IT_Update,ENABLE);
@@ -408,6 +499,7 @@ void timer7_interrput(void)
 	myNvic.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&myNvic);
 }
+
 void gpio_init(void)
 {
 
@@ -420,17 +512,8 @@ void gpio_init(void)
 	myGPIO.GPIO_Speed = GPIO_High_Speed;
 	myGPIO.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10;
 	GPIO_Init(GPIOB,&myGPIO);
-	
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE,ENABLE);
-	
-	GPIO_InitTypeDef myGPIOo;
-	myGPIOo.GPIO_Mode = GPIO_Mode_OUT;
-	myGPIOo.GPIO_OType = GPIO_OType_PP;
-	myGPIOo.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	myGPIOo.GPIO_Speed = GPIO_High_Speed;
-	myGPIOo.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5;
-	GPIO_Init(GPIOE,&myGPIOo);
 }
+
 void uart2_init(void)
 {
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2,ENABLE);
@@ -447,18 +530,19 @@ void uart2_init(void)
 	
 	USART_ITConfig(USART2,USART_IT_RXNE,ENABLE);
 	
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA,ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD,ENABLE);
+	
 	GPIO_InitTypeDef GPIO_InitStructure;
 	
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF; //This is important. We will this pin except of INPUT, OUTPUT and ANALOG so we set as Alternate Function
-	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_2 | GPIO_Pin_3;   //Communicate on PA2 and PA3
+	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_5 | GPIO_Pin_6;   //Communicate on PA2 and PA3
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;//We set the pin as Push Pull
 	GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP; //And Pull Up. Keep it always on HIGH
 	GPIO_InitStructure.GPIO_Speed	= GPIO_Speed_50MHz; //And pin frequency
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	GPIO_Init(GPIOD, &GPIO_InitStructure);
 	
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_USART2);
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_USART2);
+	GPIO_PinAFConfig(GPIOD, GPIO_PinSource5, GPIO_AF_USART2);
+	GPIO_PinAFConfig(GPIOD, GPIO_PinSource6, GPIO_AF_USART2);
 	
 	NVIC_InitTypeDef myNvic;
 	myNvic.NVIC_IRQChannel = USART2_IRQn;
@@ -469,11 +553,13 @@ void uart2_init(void)
 	
 	USART_Cmd(USART2,ENABLE);
 }
+
 void usart_send_char(char data)
 {
 	while(!(USART2->SR & 0x00000040));
 	USART_SendData(USART2,data);
 }
+
 void usart_send_string(char *s)
 {
 	while(*s)
@@ -482,304 +568,165 @@ void usart_send_string(char *s)
 		s++;
 	}
 }
+
 void uart_to_esp(void)
-{
-	
-	
-	//readDHT11();
-	I_Temp=12+i;
-	I_RH=19+i;
-	sprintf(buffer1,"#%d$",I_Temp);
-	sprintf(buffer2,"^%d*",I_RH);
-	
-	//gas
-	adc_value[0]=100+i;
-	sprintf(buffer3,"!%d@",adc_value[0]);
-	
-	state_led_LVR = GPIO_ReadOutputDataBit(GPIOB, led_LVR_pin);
-	if(state_led_LVR)
-	{
-		buffer[0]='A';
-	}
-	else
-	{
-		buffer[0]='a';
-	}
-	
-	state_led_KCR = GPIO_ReadOutputDataBit(GPIOB, led_KCR_pin);
-	if(state_led_KCR)
-	{
-		buffer[1]='B';
-	}
-	else
-	{
-		buffer[1]='b';
-	}
-	
-	state_led_BedR = GPIO_ReadOutputDataBit(GPIOB, led_BedR_pin);
-	if(state_led_BedR)
-	{
-		buffer[2]='C';
-	}
-	else
-	{
-		buffer[2]='c';
-	}
-	
-	state_led_BaR = GPIO_ReadOutputDataBit(GPIOB, led_BaR_pin);
-	if(state_led_BaR)
-	{
-		buffer[3]='D';
-	}
-	else
-	{
-		buffer[3]='d';
-	}
-	
-	state_led_Garage = GPIO_ReadOutputDataBit(GPIOB, led_Garage_pin);
-	if(state_led_Garage)
-	{
-		buffer[4]='E';
-	}
-	else
-	{
-		buffer[4]='e';
-	}
-	
-	state_fan_LVR = GPIO_ReadOutputDataBit(GPIOB, fan_LVR_pin);
-	if(state_fan_LVR==0)
-	{
-		buffer[5]='F';
-	}
-	else
-	{
-		buffer[5]='f';
-	}
-	
-	state_fan_KCR = GPIO_ReadOutputDataBit(GPIOB, fan_KCR_pin);
-	if(state_fan_KCR==0)
-	{
-		buffer[6]='G';
-	}
-	else
-	{
-		buffer[6]='g';
-	}
-	
-	state_fan_BedR = GPIO_ReadOutputDataBit(GPIOB, fan_BedR_pin);
-	if(state_fan_BedR)
-	{
-		buffer[7]='H';
-	}
-	else
-	{
-		buffer[7]='h';
-	}
+{	
+	sprintf(buffer1,"#%d$^%d*!%d@",I_Temp,I_RH,adc_value[0]);
 
-	if(state_door_garage)
-	{
-		buffer[8]='I';
-	}
-	else
-	{
-		buffer[8]='i';
-	}
-
-	if ((adc_value[1]<2000))
-	{
-		state_clothes=0;
-		TIM_SetCompare1(TIM3,30);//close clothes
-	}
-	if(state_clothes)
-	{
-		buffer[9]='J';
-	}
-	else
-	{
-		buffer[9]='j';
-	}
-
-	if(adc_value[0]>110)
-	{
-		state_window=1;
-		TIM_SetCompare3(TIM3,35);;//open window
-	}
-	if(state_window)
-	{
-		buffer[10]='K';
-	}
-	else
-	{
-		buffer[10]='k';
-	}
-	
-	if(adc_value[0]>110) state_gas=1;
-	else state_gas=0;
-	if(state_gas)
-	{
-		buffer[11]='L';
-	}
-	else
-	{
-		buffer[11]='l';
-	}
-	
-	if(state_fire)
-	{
-		buffer[12]='M';
-	}
-	else
-	{
-		buffer[12]='m';
-	}
 	usart_send_char('_');
 	usart_send_string(buffer1);
-	usart_send_string(buffer2);
-	usart_send_string(buffer3);
 	usart_send_string(buffer);
+	
+	for (int i=0; i<10; i++)
+	{
+		buffer[i]=NULL;
+	}
 }
+
 void lcd_gpio (void)
 {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE,ENABLE);
 	
-	GPIO_InitTypeDef myLED;
-	myLED.GPIO_Mode = GPIO_Mode_OUT;
-	myLED.GPIO_OType = GPIO_OType_PP;
-	myLED.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	myLED.GPIO_Speed = GPIO_Low_Speed;
-	myLED.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5;
-	GPIO_Init(GPIOE,&myLED);
+	GPIO_InitTypeDef myGPIO;
+	myGPIO.GPIO_Mode = GPIO_Mode_OUT;
+	myGPIO.GPIO_OType = GPIO_OType_PP;
+	myGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	myGPIO.GPIO_Speed = GPIO_Low_Speed;
+	myGPIO.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5;
+	GPIO_Init(GPIOE,&myGPIO);
 }
+
 void keypad_init(void)
 {
-	//init gpio
-	
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD,ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC,ENABLE);
 	
-	GPIO_InitTypeDef myLED1;
-	myLED1.GPIO_Mode = GPIO_Mode_OUT;
-	myLED1.GPIO_OType = GPIO_OType_PP;
-	myLED1.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	myLED1.GPIO_Speed = GPIO_Low_Speed;
-	myLED1.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_2 | GPIO_Pin_3;
-	GPIO_Init(GPIOD,&myLED1);
+	GPIO_InitTypeDef myGPIO;
+	myGPIO.GPIO_Mode = GPIO_Mode_OUT;
+	myGPIO.GPIO_OType = GPIO_OType_PP;
+	myGPIO.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	myGPIO.GPIO_Speed = GPIO_Low_Speed;
+	myGPIO.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_7;
+	GPIO_Init(GPIOD,&myGPIO);
 	
-	GPIO_InitTypeDef myLED2;
-	myLED2.GPIO_Mode = GPIO_Mode_IN;
-	myLED2.GPIO_OType = GPIO_OType_PP;
-	myLED2.GPIO_PuPd = GPIO_PuPd_UP;
-	myLED2.GPIO_Speed = GPIO_Low_Speed;
-	myLED2.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
-	GPIO_Init(GPIOC,&myLED2);	
+	GPIO_InitTypeDef myGPIO1;
+	myGPIO1.GPIO_Mode = GPIO_Mode_IN;
+	myGPIO1.GPIO_OType = GPIO_OType_PP;
+	myGPIO1.GPIO_PuPd = GPIO_PuPd_UP;
+	myGPIO1.GPIO_Speed = GPIO_Low_Speed;
+	myGPIO1.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
+	GPIO_Init(GPIOC,&myGPIO1);	
 }
+
 int8_t read_keypad (void)
 {
 	
-	GPIO_ResetBits(GPIOD, GPIO_Pin_2);
-	GPIO_SetBits(GPIOD, GPIO_Pin_3);
-	GPIO_SetBits(GPIOD, GPIO_Pin_4);
-	GPIO_SetBits(GPIOD, GPIO_Pin_5);
+	GPIO_ResetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_1_PIN);
+	GPIO_SetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_2_PIN);
+	GPIO_SetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_3_PIN);
+	GPIO_SetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_4_PIN);
 	//delay_10_us(100);
 	
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_1_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_1_PIN));
 		return '1';
 	}
 	
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_2_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_2_PIN));
 		return '2';	
 	}
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_3_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_3_PIN));
 		return '3';	
 	}
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_4_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_4_PIN));
 		return 'A';
 	}
 	
-	GPIO_ResetBits(GPIOD, GPIO_Pin_3);
-	GPIO_SetBits(GPIOD, GPIO_Pin_4);
-	GPIO_SetBits(GPIOD, GPIO_Pin_5);
-	GPIO_SetBits(GPIOD, GPIO_Pin_2);
+	GPIO_SetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_1_PIN);
+	GPIO_ResetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_2_PIN);
+	GPIO_SetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_3_PIN);
+	GPIO_SetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_4_PIN);
+	
 	//delay_10_us(100);
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_1_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_1_PIN));
 		return '4';
 	}
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_2_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_2_PIN));
 		return '5';
 	}
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_3_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_3_PIN));
 		return '6';	
 	}
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_4_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_4_PIN));
 		return 'B';
 	}
 	
-	GPIO_ResetBits(GPIOD, GPIO_Pin_4);
-	GPIO_SetBits(GPIOD, GPIO_Pin_5);
-	GPIO_SetBits(GPIOD, GPIO_Pin_2);
-	GPIO_SetBits(GPIOD, GPIO_Pin_3);
+	GPIO_SetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_1_PIN);
+	GPIO_SetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_2_PIN);
+	GPIO_ResetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_3_PIN);
+	GPIO_SetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_4_PIN);
+
 	//delay_10_us(100);
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_1_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_1_PIN));
 		return '7';
 	}
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_2_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_2_PIN));
 		return '8';
 	}
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_3_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_3_PIN));
 		return '9';
 	}
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_4_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_4_PIN));
 		return 'C';
 	}
 	
-	GPIO_ResetBits(GPIOD, GPIO_Pin_5);
-	GPIO_SetBits(GPIOD, GPIO_Pin_2);
-	GPIO_SetBits(GPIOD, GPIO_Pin_3);
-	GPIO_SetBits(GPIOD, GPIO_Pin_4);
+	GPIO_SetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_1_PIN);
+	GPIO_SetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_2_PIN);
+	GPIO_SetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_3_PIN);
+	GPIO_ResetBits(KEYPAD_ROW_PORT, KEYPAD_ROW_4_PIN);
 	//delay_10_us(100);
 	
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_1_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_1_PIN));
 		return '*';
 	}
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_2_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_1));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_2_PIN));
 		return '0';
 	}
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_3_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_2));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_3_PIN));
 		return '#';
 	}
-	if (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3))
+	if (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_4_PIN))
 	{
-		while (!GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3));
+		while (!GPIO_ReadInputDataBit(KEYPAD_COL_PORT, KEYPAD_COL_4_PIN));
 		return 'D';
 	}
 	
@@ -818,6 +765,7 @@ void check_password(int8_t key_var)
 		}
 	}
 }
+
 void check_password2(int8_t key_var)
 {
 	if(key_var != 'X')
@@ -844,21 +792,21 @@ void check_password2(int8_t key_var)
 		}
 	}
 }
+
 void exti0_init(void)
 {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD,ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG,ENABLE);
 	
-	GPIO_InitTypeDef myBtn1;
+	GPIO_InitTypeDef myBtn;
 	EXTI_InitTypeDef myExti;
 	NVIC_InitTypeDef myNvic;
 	
-	
-	myBtn1.GPIO_Mode = GPIO_Mode_IN;
-	myBtn1.GPIO_OType = GPIO_OType_PP;
-	myBtn1.GPIO_PuPd = GPIO_PuPd_UP;
-	myBtn1.GPIO_Pin = GPIO_Pin_0;
-	GPIO_Init(GPIOD,&myBtn1);
+	myBtn.GPIO_Mode = GPIO_Mode_IN;
+	myBtn.GPIO_OType = GPIO_OType_PP;
+	myBtn.GPIO_PuPd = GPIO_PuPd_UP;
+	myBtn.GPIO_Pin = GPIO_Pin_0;
+	GPIO_Init(GPIOD,&myBtn);
 	
 	myExti.EXTI_Line = EXTI_Line0;
 	myExti.EXTI_Mode = EXTI_Mode_Interrupt;
@@ -876,8 +824,8 @@ void exti0_init(void)
 	myNvic.NVIC_IRQChannelSubPriority = 0;
 	myNvic.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&myNvic);
-	
 }
+
 void fire_sensor_init(void)
 {
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD,ENABLE);
@@ -910,191 +858,69 @@ void fire_sensor_init(void)
 	myNvic.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&myNvic);
 }
-//interrupt program
-void TIM7_IRQHandler(void) //2s
+
+uint8_t CompareID(uint8_t* CardID, uint8_t* CompareID) 
 {
-	if (TIM_GetITStatus(TIM7, TIM_IT_Update) != RESET)
-	{
-		TIM_ClearITPendingBit(TIM7, TIM_IT_Update);
-		GPIO_ToggleBits(GPIOD, GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15);
-		i++;
-		if(i>15) i=0;
-		uart_to_esp();
-	}
-}
-void USART2_IRQHandler(void)
-{
-	if(USART_GetITStatus(USART2, USART_IT_RXNE) == SET)
-	{
-		data_receive = USART_ReceiveData(USART2);
-		
-		switch(data_receive)
-		{
-			case 'A':
-				GPIO_SetBits(GPIOB, led_LVR_pin);
-				break;
-			
-			case 'a':
-				GPIO_ResetBits(GPIOB, led_LVR_pin);
-				break;
-			
-			case 'B':
-				GPIO_SetBits(GPIOB, led_KCR_pin);
-				break;
-			
-			case 'b':
-				GPIO_ResetBits(GPIOB, led_KCR_pin);
-				break;
-			
-			case 'C':
-				GPIO_SetBits(GPIOB, led_BedR_pin);
-				break;
-			
-			case 'c':
-				GPIO_ResetBits(GPIOB, led_BedR_pin);
-				break;
-			
-			case 'D':
-				GPIO_SetBits(GPIOB, led_BaR_pin);
-				break;
-			
-			case 'd':
-				GPIO_ResetBits(GPIOB, led_BaR_pin);
-				break;
-			
-			case 'E':
-				GPIO_SetBits(GPIOB, led_Garage_pin);
-				break;
-			
-			case 'e':
-				GPIO_ResetBits(GPIOB, led_Garage_pin);
-				break;
-			/*
-			case 'F':
-				GPIO_ResetBits(GPIOB, fan_LVR_pin);
-				break;
-			
-			case 'f':
-				GPIO_SetBits(GPIOB, fan_LVR_pin);
-				break;
-			
-			case 'G':
-				GPIO_ResetBits(GPIOB, fan_KCR_pin);
-				break;
-			
-			case 'g':
-				GPIO_SetBits(GPIOB, fan_KCR_pin);
-				break;
-			
-			case 'H':
-				GPIO_SetBits(GPIOB, fan_BedR_pin);
-				break;
-			
-			case 'h':
-				GPIO_ResetBits(GPIOB, fan_BedR_pin);
-				break;
-			
-			case 'I':
-				state_door_garage=1;
-				TIM_SetCompare1(TIM12,35);
-				break;
-			
-			case 'i':
-				state_door_garage=0;
-				TIM_SetCompare1(TIM12,75);
-				break;
-			
-			case '0': //turn off buzzer
-				GPIO_ResetBits(GPIOB, GPIO_Pin_10);
-				state_fire = 0;
-				break;
-			
-			
-			case 'L':
-				state_gate=1;
-				for (int j=0;j<10;j++)
-				{
-					GPIO_ToggleBits(GPIOB, GPIO_Pin_8);
-					delay_10_us(10000);
-				}
-				if(gate_check%2) TIM_SetCompare4(TIM3,55);
-				else TIM_SetCompare4(TIM3,15);
-				gate_check ++;
-				break;
-			
-			case 'l':
-				state_gate=0;
-				for (int j=0;j<10;j++)
-				{
-					GPIO_ToggleBits(GPIOB, GPIO_Pin_9);
-					delay_10_us(10000);
-				}
-				break;
-			*/
-			case 'J':
-				state_clothes=1;
-				TIM_SetCompare1(TIM3,75);//open clothes
-				break;
-			
-			case 'j':
-				state_clothes=0;
-				TIM_SetCompare1(TIM3,30);//close clothes
-				break;
-			
-			case 'K':
-				state_window=1;
-				TIM_SetCompare3(TIM3,35);;//open window
-				break;
-			
-			case 'k':
-				state_window=0;
-				TIM_SetCompare3(TIM3,80);;//close window
-				
-				break;
-			
-			default:
-				break;
-		}
-		
-		USART_ClearITPendingBit(USART2,USART_IT_RXNE);
-	}
-}
-void EXTI0_IRQHandler(void)
-{
-	if(EXTI_GetITStatus(EXTI_Line0)!=RESET)
-	{
-		delay_10_us(10000);
-		if(GPIO_ReadInputDataBit(GPIOD,GPIO_Pin_0)==RESET)
-		{
-			x++;
-			lcd_write(0,0,(int8_t *)"Nhap mat khau:  ");
-			lcd_write(1,0,(int8_t *)"      ");
-			while(1)
+	uint8_t i;
+	for (i = 0; i < 4; i++) {
+		if (CardID[i] != CompareID[i]) 
 			{
-				key = read_keypad();
-				check_password(key);
-				delay_10_us(10000);//100ms
-				if (out)
-				{
-					out=0;
-					break;
-				}
-			}
-		}
-		EXTI_ClearITPendingBit(EXTI_Line0);
+			return MI_ERR;
+		  }
 	}
+	return MI_OK;
 }
-void EXTI1_IRQHandler(void)
+void check_RFID(void)
 {
-	if(EXTI_GetITStatus(EXTI_Line1)!=RESET)
-	{
-		delay_10_us(10000);
-		if(GPIO_ReadInputDataBit(GPIOD,GPIO_Pin_1)==RESET)
-		{	
+	status = MFRC522_Request(PICC_REQALL, g_ucTempbuf);
+    if (status != MI_OK)
+			{  
+		  flag_loop=0;  
+      return;
+    }
 			
-			state_fire = 1;
-			GPIO_SetBits(GPIOB, GPIO_Pin_10);//buzzer
+		status = MFRC522_Anticoll(g_ucTempbuf);
+    if (status != MI_OK)
+		{  
+		 flag_loop=0;  
+		 return;
 		}
-		EXTI_ClearITPendingBit(EXTI_Line1);
-	}
+		
+	  if(flag_loop==1) 
+		{
+		 MFRC522_Halt();	
+		 return;
+		}
+		
+		flag_loop=1;
+		MFRC522_Halt();
+		
+		static bool flag_gate = false;
+		
+	  if (CompareID(g_ucTempbuf,MyID) == MI_OK) 
+		{
+			for (int i=0; i<6; i++)
+			{
+				GPIO_ToggleBits(GPIO_PORT, LED_GATE_GREEN);
+				delay_ms(150);
+			}
+			if (!flag_gate)
+			{
+				flag_gate = true;
+				OPEN_GATE;
+			}
+			else
+			{
+				flag_gate = false;
+				CLOSE_GATE;
+			}
+		} 
+		else 
+		{
+			for (int i=0; i<6; i++)
+			{
+				GPIO_ToggleBits(GPIO_PORT, LED_GATE_RED);
+				delay_ms(150);
+			}
+		}	
 }

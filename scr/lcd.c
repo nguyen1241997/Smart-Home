@@ -1,4 +1,5 @@
 #include "lcd.h"
+#include "main.h"
 
 void lcd_send(uint8_t mode, uint8_t data)
 {

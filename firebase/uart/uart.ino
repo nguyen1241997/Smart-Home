@@ -49,11 +49,13 @@ void setup()
   Serial.begin(9600);
   Serial.print("Connecting");
   WiFi.begin(wifiName,password);
+  /*
   while(WiFi.status()!=WL_CONNECTED)
   {
     delay(500);
     Serial.print(".");
   }
+  */
   Serial.println();
   Serial.println("Connected");
 
@@ -71,6 +73,7 @@ void loop()
   //Receive_uart();
   
   //send data to firebase
+  /*
   temp=32;
   humi=67;
   gas=1111;
@@ -79,6 +82,7 @@ void loop()
   Firebase.setInt("gas_sensor",gas);
 
   Get_data_Firebase();
+  */
   RFID();
   
   delay(10);
